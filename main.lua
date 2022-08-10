@@ -13,36 +13,10 @@ screen = {
     height = math.floor(love.graphics.getHeight() / 20),
     
     current = "camp",
+    key = "",
     
     update = function(self, dt)
         self[self.current](self)
-    end,
-    
-    
-    -- COMMON FUNCTIONS --
-    
-    
-    init = function(subLeft, i)
-        subLeft = draw:border(subLeft)
-        draw:image(i, subLeft, 2, color.white)
-    end,
-    
-    hpmp = function(x, y, entity)
-        draw:icon(hp, x, y, color.hp)
-        draw:bar(entity:get("hp"), entity:get("max_hp"), color.hp, color.gray48, 40, "HP: ", "#", 6, 4)
-        draw:icon(mp, x, y + 1, color.mp)
-        draw:bar(entity:get("mp"), entity:get("max_mp"), color.mp, color.gray48, 40, "MP: ", "#", 6, 5)
-    end,
-    
-    hpmpxpgp = function(x, y, entity)
-        draw:icon(hp, x, y, color.hp)
-        draw:bar(player:get("hp"), player:get("max_hp"), color.hp, color.gray48, 40, "HP: ", "#", 6, 4)
-        draw:icon(mp, x, y + 1, color.mp)
-        draw:bar(player:get("mp"), player:get("max_mp"), color.mp, color.gray48, 40, "MP: ", "#", 6, 5)
-        draw:icon(xp, x, y + 2, color.xp)
-        draw:bar(player:get("xp"), player:get("max_xp"), color.xp, color.gray48, 40, "XP: ", "#", 6, 6)
-        draw:icon(gp, x, y + 3, color.gp)
-        draw:text("Gold: %d" % {player:get("gp")}, 6, 7)
     end,
     
     
@@ -50,21 +24,28 @@ screen = {
     
     
     camp = function(self)
-        self.init(38, "image/camp")
+        draw:initScreen(38, "image/camp")
         
-        draw:text("%s [Lvl 1 Warrior]" % {player:get("name")}, 4, 3)
+        draw:mainStats(player)
+        draw:newline()
         
-        draw:icon(hp, 4, 4, color.hp)
-        draw:bar(player:get("hp"), player:get("max_hp"), color.hp, color.gray48, 40, "HP: ", "#", 6, 4)
-        draw:icon(mp, 4, 5, color.mp)
-        draw:bar(player:get("mp"), player:get("max_mp"), color.mp, color.gray48, 40, "MP: ", "#", 6, 5)
-        draw:icon(xp, 4, 6, color.xp)
-        draw:bar(player:get("xp"), player:get("max_xp"), color.xp, color.gray48, 40, "XP: ", "#", 6, 6)
-        draw:icon(gp, 4, 7, color.gp)
-        draw:text("Gold: %d" % {player:get("gp")}, 6, 7)
+        draw:options({"Map", "Character", "Rest", "Options"})
+        draw:newline()
         
-        draw:options({"Map", "Character", "Rest", "Options"}, 4, 9)
-        draw:text("- Press a letter.", 4, 17)
+        draw:text("- Press a letter to select an option.")
+        
+        if self.key == "c" then self.current = "character" end
+    end,
+    
+    character = function(self)
+        draw:init(38, "image/character")
+        draw:mainStats(player)
+        draw:newline()
+        
+        draw:options({"Inventory", "Equipment", "Crafting", "Arts", "Quests", "Stats"})
+        draw:newline()
+        
+        draw:text("- Press a letter to select an option.")
     end,
 }
 
@@ -80,8 +61,7 @@ function love.load()
 end
 
 function love.keypressed(key)
-    if key == "a" then player:add("xp", -math.ceil(player:get("max_xp") / 10)) end
-    if key == "d" then player:add("xp", math.ceil(player:get("max_xp") / 10)) end
+    screen.key = key
 end
 
 function love.update(dt)
