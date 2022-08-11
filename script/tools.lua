@@ -20,3 +20,7 @@ function dump_table(o)
       return tostring(o)
    end
 end
+
+function rand(range)
+    return math.random(range[1], range[2])
+end
