@@ -24,3 +24,8 @@ end
 function rand(range)
     return math.random(range[1], range[2])
 end
+
+function isInRange(str, low, high)
+    num = tonumber(str)
+    if str:match("^%-?%d+$") and num >= low and num <= high then return true else return false end
+end

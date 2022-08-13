@@ -124,6 +124,13 @@ draw = {
     -- Compound
     
     
+    imageSide = function(self, image, c)
+        c = c or color.white
+        
+        self:top()
+        self:image(image, self.subLeft, 2, color.white)
+    end,
+    
     initScreen = function(self, subWidth, i)
         self:top()
         self:border(subWidth)

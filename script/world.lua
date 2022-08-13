@@ -3,5 +3,5 @@ require "script/node"
 
 World = Node{
     player = Entity{name="Player"},
-    enemy = Entity{name="Enemy"},
+    enemy = Entity{name="Green Slime"},
 }

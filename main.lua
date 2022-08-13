@@ -17,7 +17,6 @@ throwingKnife = Item{name="Throwing Knife", consumable=true, effect=Effect{hp={-
 sword = Item{name="Sword", equipment=true, slot="weapon", effect=Effect{hp={-2, -3}}}
 chestplate = Item{name="Chestplate", equipment=true, slot="body", stats={armor=1, maxHp=1}}
 
-
 function love.load()
     font = love.graphics.newImageFont("img/imagefont.png",
         " abcdefghijklmnopqrstuvwxyz" ..
@@ -42,7 +41,9 @@ function love.keypressed(key)
         player:addItem(chestplate)
     end
     
-    if key == "kpenter" then print(dump_table(screen.branch)) end
+    if key == "kp3" then player:equip(sword) end
+    
+    if key == "kpenter" then print(dump_table(image)) end
 end
 
 function love.draw()

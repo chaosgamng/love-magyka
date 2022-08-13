@@ -9,8 +9,11 @@ screen = {
     branch = {},
     
     key = "",
+    
     turn = "player",
     text = "",
+    item = nil,
+    itemEquipped = false,
     
     update = function(self, dt)
         self[self.current](self)
@@ -23,7 +26,18 @@ screen = {
     end,
     
     upPast = function(self, name)
+        local nextScreen = ""
         
+        for i = #self.branch, 1, -1 do
+            nextScreen = self.branch[i]
+            table.remove(self.branch, i)
+            if name == nextScreen then
+                nextScreen = self.branch[i - 1]
+                break
+            end
+        end
+        
+        self.current = nextScreen
     end,
     
     down = function(self, name)
@@ -124,13 +138,22 @@ screen = {
         for k, v in pairs(equipment) do
             i = i + 1
             
-            draw:text("(%d) %s: %s" % {i, v, playerEquipment[v]})
+            if playerEquipment[v] ~= "" then draw:text("(%d) %s: %s" % {i, v, playerEquipment[v]:display(0)})
+            else draw:text("(%d) %s: {gray48}None" % {i, v}) end
         end
         
         draw:newline()
         draw:text("- Press a number to select an option. Press ESC to go back.")
         
-        if self.key == "escape" then self:up() end
+        if isInRange(self.key, 1, 8) then
+            item = playerEquipment[equipment[tonumber(self.key)]]
+            
+            if item ~= "" then
+                self.item = item
+                self.itemEquipped = true
+                self:down("inspectItem")
+            end
+        elseif self.key == "escape" then self:up() end
     end,
     
     
@@ -138,7 +161,8 @@ screen = {
     
     
     battle = function(self)
-        draw:initScreen(38, "enemy/"..enemy:get("name"))
+        draw:initScreen(38, "battle/default")
+        draw:imageSide("enemy/"..enemy:get("name"))
         draw:hpmpAlt(enemy, draw.subLeft + 2, 3)
         
         draw:top()
@@ -195,7 +219,7 @@ screen = {
         draw:newline()
         draw:text("You won! Good job.")
         
-        if self.key == "return" then self:up() end
+        if self.key == "return" then self:upPast("battle") end
     end,
     
     defeat = function(self)
@@ -209,6 +233,13 @@ screen = {
         draw:text("You lost! Fuck you.")
         
         if self.key == "return" then self:up() end
+    end,
+    
+    inspectItem = function(self)
+        draw:initScreen(38, "image/inspectItem")
+        draw:imageSide("item/"..self.item:get("name"))
+        
+        if self.key == "escape" then self:up() end
     end,
     
     crafting = function(self)
