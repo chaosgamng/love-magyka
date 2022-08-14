@@ -16,14 +16,16 @@ draw = {
     text = function(self, text, ...)
         local arg = {...}
         local x = 4
-        local c = color.white
+        local c = "white"
         
         if #arg == 1 then
             if type(arg[1]) == "number" then x = arg[1]
+            elseif type(arg[1]) == "string" then c = arg[1]
             elseif type(arg[1]) == "table" then c = arg[1] end
         elseif #arg == 2 then
             x = arg[1]
             if type(arg[2]) == "number" then self.row = arg[2]
+            elseif type(arg[2]) == "string" then c = arg[2]
             elseif type(arg[2]) == "table" then c = arg[2] end
         elseif #arg == 3 then
             x = arg[1]
@@ -33,27 +35,45 @@ draw = {
         
         local oText = text
         local parsedText = {}
-        local parsedColors = {c}
+        local parsedTextLength = 0
+        local parsedColors = {}
+        local parsedIcons = {}
+         
+        if text[1] ~= "{" then
+            local colorName = ""
+            if type(c) == "string" then colorName = c
+            else colorName = "custom" end
+            text = "{%s}%s" % {colorName, text}
+        end
         
-        while true do
-            oJ = 0
-            i = string.find(text, "{", 1, true)
-            j = string.find(text, "}", 1, true)
+        while count(text, "{") > 0 do
+            local i = text:find("{", 1, true)
+            local j = text:find("}", 1, true)
             
-            if i then
-                if i > 1 then table.insert(parsedText, string.sub(text, oJ + 1, i - 1))
-                else table.insert(parsedText, "") end
+            local colorName = text:sub(i + 1, j - 1)
+            if colorName == "custom" then table.insert(parsedColors, c)
+            else table.insert(parsedColors, color[colorName]) end
+            text = text:sub(j + 1)
+            
+            if count(text, "{") > 0 then bufferText = text:sub(1, text:find("{", 1, true) - 1)
+            else bufferText = text end
+            
+            while count(bufferText, "<") > 0 do  -- Parse icons
+                local k = bufferText:find("<", 1, true)
+                local l = bufferText:find(">", 1, true)
                 
-                table.insert(parsedColors, color[string.sub(text, i + 1, j - 1)])
-                text = string.sub(text, j + 1)
-            else
-                table.insert(parsedText, string.sub(text, oJ + 1))
-                break
+                parsedIcons[k + parsedTextLength] = "icon/"..bufferText:sub(k + 1, l - 1)
+                bufferText = bufferText:gsub(bufferText:sub(k, l), " ")
             end
+            
+            parsedTextLength = parsedTextLength + #bufferText
+            table.insert(parsedText, bufferText)
+            text = text:sub(#bufferText)
         end
         
         if #parsedText ~= #parsedColors then
             parsedText = {oText}
+            text = oText
             parsedColors = {c}
         end
         
@@ -64,8 +84,9 @@ draw = {
             i = i + string.len(v)
         end
         
-        local newlines = select(2, string.match(text, "\n", 1, true)) or 0
-        self.row = self.row + 1 + newlines
+        for k, v in pairs(parsedIcons) do self:icon(v, k + 3) end
+        
+        self.row = self.row + 1
     end,
     
     icon = function(self, i, ...)
@@ -124,11 +145,42 @@ draw = {
     -- Compound
     
     
-    imageSide = function(self, image, c)
+    item = function(self, item)
+        self:text(item:display(0))
+        self:newline()
+        self:text(item:get("description"))
+        
+        local effect = item:get("effect")
+        if effect then self:effect(effect) end
+        
+        self:newline()
+        self:text("<gp> %d" % {item:get("value")})
+    end,
+    
+    effect = function(self, effect)
+        local text = ""
+        local hp = effect:get("hp")
+        local mp = effect:get("mp")
+        
+        if hp or mp then self:newline() end
+        
+        if hp and hp[1] + hp[2] ~= 0 then
+            if hp[2] > 0 then text = "Restores" else text = "Damages" end
+            self:text("%s <hp> {hp}%d - %d" % {text, math.abs(hp[1]), math.abs(hp[2])})
+        end
+        
+        if mp and mp[1] + mp[2] ~= 0 then
+            if mp[2] > 0 then text = "Restores" else text = "Damages" end
+            self:text("%s <mp> {mp}%d - %d" % {text, math.abs(mp[1]), math.abs(mp[2])})
+        end
+    end,
+    
+    imageSide = function(self, i, default, c)
         c = c or color.white
+        if not image[i] then i = default end
         
         self:top()
-        self:image(image, self.subLeft, 2, color.white)
+        self:image(i, self.subLeft, 2, color.white)
     end,
     
     initScreen = function(self, subWidth, i)
@@ -143,17 +195,17 @@ draw = {
         if y then self.row = y end
         
         self:text("%s [Lvl 1 Warrior]" % {entity:get("name")}, x)
-        self:icon(hp, x, self.row, color.hp)
+        self:icon(hp, x, self.row)
         self:bar(entity:get("hp"), entity:get("stats").maxHp, color.hp, color.gray48, 40, "HP: ", "#", x + 2)
-        self:icon(mp, x, self.row, color.mp)
+        self:icon(mp, x, self.row)
         self:bar(entity:get("mp"), entity:get("stats").maxMp, color.mp, color.gray48, 40, "MP: ", "#", x + 2)
     end,
     
     hpmpAlt = function(self, entity, x, y)
         self:text(entity:get("name"), x, y)
-        self:icon(hp, x, self.row, color.hp)
+        self:icon(hp, x, self.row)
         self:bar(entity:get("hp"), entity:get("stats").maxHp, color.hp, color.gray48, 20, "HP: ", "%", x + 2)
-        self:icon(mp, x, self.row, color.mp)
+        self:icon(mp, x, self.row)
         self:bar(entity:get("mp"), entity:get("stats").maxMp, color.mp, color.gray48, 20, "MP: ", "%", x + 2)
     end,
     
@@ -162,9 +214,9 @@ draw = {
         if y then self.row = y end
         
         self:hpmp(entity, x)
-        self:icon(xp, x, self.row, color.xp)
+        self:icon(xp, x, self.row)
         self:bar(entity:get("xp"), entity:get("maxXp"), color.xp, color.gray48, 40, "XP: ", "#", x + 2)
-        self:icon(gp, x, self.row, color.gp)
+        self:icon(gp, x, self.row)
         self:text("Gold: %d" % {entity:get("gp")}, x + 2)
     end,
     

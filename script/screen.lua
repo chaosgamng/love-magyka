@@ -13,7 +13,6 @@ screen = {
     turn = "player",
     text = "",
     item = nil,
-    itemEquipped = false,
     
     update = function(self, dt)
         self[self.current](self)
@@ -54,13 +53,13 @@ screen = {
         draw:top()
         
         local magyka = {
-            "  x*8888x.:d8888:.:d888b                                        <688889>                    ",
+            "  x*8888x.:d8888:.:d888b                                        ,688889,                    ",
             " X'  98888X:`88888:`8888!                           8L           !8888!                     ",
             "X8x.  8888X   888X  8888!                          8888!   .dL   '8888   ..                 ",
             "X8888 X8888   8888  8888'    .uu689u.   .uu6889u.  `Y888k:*888.   8888 d888L    .uu689u.    ",
             "'*888 !8888  !888* !888*   .888`*8888* d888`*8888    8888  888!   8888`*88**  .888`*8888*   ",
             "  `98  X888  X888  X888    8888  8888  8888  8888    8888  888!   8888 .d*.   8888  8888    ",
-            "   '   X888  X888  8888    8888  8888  8888  8888    8888  888!   8888~8888   8888  8888    ",
+            "   '   X888  X888  8888    8888  8888  8888  8888    8888  888!   8888=8888   8888  8888    ",
             "   dx .8888  X888  8888.   8888  8888  8888  8888    8888  888!   8888 '888&  8888  8888    ",
             " .88888888*  X888  X888X.  8888.:8888  888&.:8888   x888&.:888'   8888  8888. 8888.:8888    ",
             "  *88888*    *888  `8888'  *888*'*888' *888*'8888.   *88*' 888  '*888*' 8888* *888*'*888*   ",
@@ -127,7 +126,10 @@ screen = {
         draw:newline()
         draw:text("- Press a number to select an option. Press ESC to go back.")
         
-        if self.key == "escape" then self:up() end
+        if isInRange(self.key, 1, #playerInventory) then
+            self.item = playerInventory[tonumber(self.key)][1]
+            self:down("inspectItem")
+        elseif self.key == "escape" then self:up() end
     end,
     
     equipment = function(self)
@@ -146,12 +148,11 @@ screen = {
         draw:text("- Press a number to select an option. Press ESC to go back.")
         
         if isInRange(self.key, 1, 8) then
-            item = playerEquipment[equipment[tonumber(self.key)]]
+            local item = playerEquipment[equipment[tonumber(self.key)]]
             
             if item ~= "" then
                 self.item = item
-                self.itemEquipped = true
-                self:down("inspectItem")
+                self:down("inspectItemEquipped")
             end
         elseif self.key == "escape" then self:up() end
     end,
@@ -237,9 +238,40 @@ screen = {
     
     inspectItem = function(self)
         draw:initScreen(38, "image/inspectItem")
-        draw:imageSide("item/"..self.item:get("name"))
+        draw:imageSide("item/"..self.item:get("name"), "item/default")
         
-        if self.key == "escape" then self:up() end
+        draw:top()
+        draw:item(self.item)
+        
+        draw:newline()
+        if self.item:get("consumable") then draw:options({"Use", "Discard"})
+        elseif self.item:get("equipment") then draw:options({"Equip", "Discard"})
+        else draw:options({"Discard"}) end
+        
+        if self.key == "e" and self.item:get("equipment") then
+            player:equip(self.item)
+            self:up()
+        elseif self.key == "d" then
+            player:removeItem(self.item)
+            
+            if player:numOfItem(self.item) == 0 then self:up() end
+        elseif self.key == "escape" then self:up() end
+    end,
+    
+    inspectItemEquipped = function(self)
+        draw:initScreen(38, "image/inspectItem")
+        draw:imageSide("item/"..self.item:get("name"), "item/default")
+        
+        draw:top()
+        draw:item(self.item)
+        
+        draw:newline()
+        draw:options({"Unequip"})
+        
+        if self.key == "u" then
+            player:unequip(self.item)
+            self:up()
+        elseif self.key == "escape" then self:up() end
     end,
     
     crafting = function(self)

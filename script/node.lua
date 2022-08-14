@@ -1,4 +1,10 @@
+require "script/tools"
+
 function Node(class)
+    for k, v in pairs(class) do
+        if type(v) == "table" then class[k] = deepcopy(v) end
+    end
+    
     class.add_component = function(self, name, component)
         if self.components == nil then self.components = {} end
         
@@ -27,7 +33,9 @@ function Node(class)
     end
     
     if not class.get then
-        class.get = function(self, key) return self[key] end
+        class.get = function(self, key)
+            if self[key] then return self[key] else return nil end
+        end
     end
     if not class.set then
         class.set = function(self, key, value) self[key] = value end
@@ -52,11 +60,9 @@ function Node(class)
         end
     end
     
-    class:init()
-    
-    return setmetatable(class, 
-             { __call = function(self, init)
-                           return setmetatable(init or {},
-                                               { __index = class })
-                        end })
+    return setmetatable(class, {
+        __call = function(self, init)
+            return setmetatable(init or {}, {__index = class})
+        end
+    })
 end

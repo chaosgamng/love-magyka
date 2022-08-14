@@ -4,7 +4,9 @@ require "script/tools"
 
 Item = Node{
     name = "item",
+    description = "description",
     rarity = "common",
+    value = 1,
     stackable = true,
     equipment = false,
     slot = "",

@@ -105,12 +105,19 @@ Entity = Node{
         self:removeItem(item)
     end,
     
-    unequip = function(self, slot)
-        if self.equipment[slot] ~= "" then
+    unequip = function(self, a)
+        if type(a) == "string" then slot = a
+        elseif type(a) == "table" then slot = a:get("slot") end
+        
+        if self:isEquipped(slot) then
             self.equipment[slot]:update()
             self:addItem(self.equipment[slot])
             self.equipment[slot] = ""
         end
+    end,
+    
+    isEquipped = function(self, slot)
+        return self.equipment[slot] and self.equipment[slot] ~= ""
     end,
     
     
@@ -120,7 +127,7 @@ Entity = Node{
     attack = function(self)
         local weapon = self.equipment["weapon"]
         
-        if weapon ~= "" then
+        if self:isEquipped("weapon") then
             return weapon.effect
         else
             return Effect{hp={-1, -1}}
@@ -157,6 +164,10 @@ Entity = Node{
     
     
     init = function(self)
+        for k, v in ipairs(equipment) do
+            self.equipment[v] = ""
+        end
+        
         for k, v in ipairs(stats) do
             self.stats[v] = 0
             self.baseStats[v] = 0

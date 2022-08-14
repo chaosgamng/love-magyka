@@ -8,13 +8,14 @@ require "script/tools"
 require "script/world"
 
 world = World{}
+world:init()
 player = world:get("player")
 enemy = world:get("enemy")
 
 material = Item{name="Crafting Material"}
-potion = Item{name="Health Potion", consumable=true, effect=Effect{hp={2,9}}}
-throwingKnife = Item{name="Throwing Knife", consumable=true, effect=Effect{hp={-4,-5}}}
-sword = Item{name="Sword", equipment=true, slot="weapon", effect=Effect{hp={-2, -3}}}
+potion = Item{name="Health Potion", consumable=true, effect=Effect{hp={2,9}}, rarity="uncommon"}
+throwingKnife = Item{name="Throwing Knife", consumable=true, effect=Effect{hp={-4,-5}}, rarity="uncommon"}
+sword = Item{name="Sword", description="Wow, it's a sword! I've never seen one of these before!", equipment=true, slot="weapon", effect=Effect{hp={-2, -3}}}
 chestplate = Item{name="Chestplate", equipment=true, slot="body", stats={armor=1, maxHp=1}}
 
 function love.load()
@@ -25,25 +26,24 @@ function love.load()
     love.graphics.setFont(font)
     love.graphics.setBackgroundColor(color.gray18)
     math.randomseed(os.time())
+    
+    -- TEMP
+    
+    player:addItem(material)
+    player:addItem(potion)
+    player:addItem(throwingKnife)
+    player:addItem(sword)
+    player:addItem(chestplate)
+    player:equip(sword)
+    
+    print(player.inventory == sword.inventory)
 end
 
 function love.keypressed(key)
     screen.key = key
     print(key)
     
-    if key == "kp1" then screen:down("battle") end
-    
-    if key == "kp2" then
-        player:addItem(material)
-        player:addItem(potion)
-        player:addItem(throwingKnife)
-        player:addItem(sword)
-        player:addItem(chestplate)
-    end
-    
-    if key == "kp3" then player:equip(sword) end
-    
-    if key == "kpenter" then print(dump_table(image)) end
+    if key == "f1" then screen:down("battle") end
 end
 
 function love.draw()
