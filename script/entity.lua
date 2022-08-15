@@ -124,24 +124,26 @@ Entity = Node{
     -- BATTLING / STATS
     
     
-    attack = function(self)
+    attack = function(self, target)
         local weapon = self.equipment["weapon"]
+        local effect = ""
+        local text = ""
         
         if self:isEquipped("weapon") then
-            return weapon.effect
+            effect = weapon:get("effect")
+            text = "%s %s %s, " % {self:get("name"), weapon:get("verb"), target:get("name")}
         else
-            return Effect{hp={-1, -1}}
+            effect = Effect{hp={-1, -1}}
+            text = "%s attacks %s, " % {self:get("name"), target:get("name")}
         end
+        
+        return target:defend(self, effect, text)
     end,
     
-    defend = function(self, source, effect)
+    defend = function(self, source, effect, text)
         local hp = 0
         local mp = 0
         local passive = false
-        local text = ""
-        
-        if self == source then text = "%s %s, " % {self:get("name"), self:get("attackText")}
-        else text = "%s %s %s, " % {source:get("name"), self:get("attackText"), self:get("name")} end
         
         if effect:get("hp") then
             hp = rand(effect:get("hp"))
@@ -149,9 +151,13 @@ Entity = Node{
             mp = rand(effect:get("mp"))
         end
         
-        if hp < 0 and mp < 0 then text = text.."dealing %d and %d damage." % {math.abs(hp), math.abs(mp)}
-        elseif hp < 0 then text = text.."dealing %d damage." % {math.abs(hp)}
-        elseif mp < 0 then text = text.."dealing %d damage." % {math.abs(mp)} end
+        if hp < 0 and mp < 0 then text = text.."dealing <hp>{hp} %d {white}and <mp>{mp} %d {white}damage." % {math.abs(hp), math.abs(mp)}
+        elseif hp < 0 then text = text.."dealing <hp>{hp} %d {white}damage." % {math.abs(hp)}
+        elseif mp < 0 then text = text.."dealing <hp>{hp} %d {white}damage." % {math.abs(mp)} end
+        
+        if hp > 0 and mp > 0 then text = text.."healing <hp>{hp} %d {white}and <mp>{mp} %d{white}." % {math.abs(hp), math.abs(mp)}
+        elseif hp > 0 then text = text.."healing <hp>{hp} %d{white}." % {math.abs(hp)}
+        elseif mp > 0 then text = text.."healing <hp>{hp} %d{white}." % {math.abs(mp)} end
         
         self:add("hp", hp)
         self:add("mp", mp)

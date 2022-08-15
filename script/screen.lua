@@ -8,7 +8,10 @@ screen = {
     post = "title",
     branch = {},
     
+    pause = false,
     key = "",
+    stage = 1,
+    option = "",
     
     turn = "player",
     text = "",
@@ -21,6 +24,9 @@ screen = {
     
     up = function(self)
         self.current = self.branch[#self.branch]
+        self.text = ""
+        self.stage = 1
+        self.option = ""
         table.remove(self.branch)
     end,
     
@@ -174,7 +180,7 @@ screen = {
             draw:options({"Fight", "Art", "Guard", "Item", "Flee"})
             
             if self.key == "f" then
-                self.text = enemy:defend(player, player:attack())
+                self.text = player:attack(enemy)
                 self.turn = "after player"
             end
         elseif self.turn == "after player" then
@@ -188,7 +194,7 @@ screen = {
         elseif self.turn == "enemy" then
             draw:text("Enemy's turn")
             
-            self.text = player:defend(enemy, enemy:attack())
+            self.text = enemy:attack(player)
             
             self.turn = "after enemy"
         elseif self.turn == "after enemy" then
@@ -206,7 +212,7 @@ screen = {
     
     end,
     
-    battleInventory = function(self)
+    battleItem = function(self)
     
     end,
     
@@ -243,19 +249,45 @@ screen = {
         draw:top()
         draw:item(self.item)
         
-        draw:newline()
-        if self.item:get("consumable") then draw:options({"Use", "Discard"})
-        elseif self.item:get("equipment") then draw:options({"Equip", "Discard"})
-        else draw:options({"Discard"}) end
-        
-        if self.key == "e" and self.item:get("equipment") then
-            player:equip(self.item)
-            self:up()
-        elseif self.key == "d" then
-            player:removeItem(self.item)
+        if self.stage == 1 then
+            draw:newline()
+            if self.item:get("consumable") then draw:options({"Use", "Discard"})
+            elseif self.item:get("equipment") then draw:options({"Equip", "Discard"})
+            else draw:options({"Discard"}) end
             
-            if player:numOfItem(self.item) == 0 then self:up() end
-        elseif self.key == "escape" then self:up() end
+            if self.key == "e" and self.item:get("equipment") then
+                player:equip(self.item)
+                self.text = "Equipped "..self.item:display().."."
+                self.option = "e"
+                self.stage = 2
+            elseif self.key == "u" and self.item:get("consumable") and self.item:get("target") ~= "enemy" then
+                self.text = self.item:use(player)
+                self.option = "u"
+                self.stage = 2
+            elseif self.key == "d" then
+                player:removeItem(self.item)
+                self.text = "Discarded "..self.item:display(1).."."
+                self.option = "d"
+                self.stage = 2
+            elseif self.key == "escape" then self:up() end
+        elseif self.stage == 2 then
+            draw:newline()
+            draw:text(self.text)
+            
+            draw:newline()
+            draw:text("- Press [ENTER] to continue.")
+            
+            if self.key == "return" or self.key == "escape" then
+                if ("eu"):find(self.option) then
+                    if not self.item:get("infinite") then player:removeItem(self.item) end
+                    
+                    if player:numOfItem(self.item) == 0 then self:up()
+                    else self.stage = 1 end
+                else
+                    self:up()
+                end
+            end
+        end
     end,
     
     inspectItemEquipped = function(self)
