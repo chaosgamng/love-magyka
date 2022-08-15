@@ -60,6 +60,7 @@ Entity = Node{
     
     addItem = function(self, item, quantity)
         local quantity = quantity or 1
+        item = deepcopy(item)
         item:update()
         
         if self:numOfItem(item) > 0 and item:get("stackable") then

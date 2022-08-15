@@ -34,18 +34,31 @@ function love.load()
     player:addItem(material)
     player:addItem(potion)
     player:addItem(throwingKnife)
-    player:addItem(sword)
-    player:addItem(chestplate)
+    player:addItem(sword, 12)
+    player:addItem(chestplate, 12)
     player:equip(sword)
 end
 
 function love.keypressed(key)
+    if key == "f1" then
+        screen.item:set("value", 999)
+    end
+    
+    if key == "f2" then
+        print(dumpTable(screen.branchData))
+    end
+
     if key == "`" then console = not console end
-    if not console then screen.key = key end
+    if not console then
+        screen.key = key
+        print(key)
+    end
     
     if console then
         if ("abcdefghijklmnopqrstuvwyz"):find(key) then command = command..key
-        elseif key == "backspace" then command = command:split(1, #command - 1)
+        elseif key == "backspace" then 
+            if #command > 1 then command = command:sub(1, #command - 1)
+            elseif #command == 1 then command = "" end
         elseif key == "return" then
             if command == "battle" then
                 screen.turn = "player"
@@ -55,6 +68,7 @@ function love.keypressed(key)
                 player:set("mp", 999999999)
             end
             
+            command = ""
             console = false
         end
     end
@@ -66,6 +80,6 @@ function love.draw()
     if console then
         draw:rect("gray18", 1, 1, screen.width, 20)
         draw:rect("gray48", 1, 21, screen.width, 1)
-        draw:text(command, 1, 21)
+        draw:text(command, 2, 21)
     end
 end

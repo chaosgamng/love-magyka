@@ -52,7 +52,8 @@ draw = {
             
             local colorName = text:sub(i + 1, j - 1)
             if colorName == "custom" then table.insert(parsedColors, c)
-            else table.insert(parsedColors, color[colorName]) end
+            elseif color[colorName] then table.insert(parsedColors, color[colorName])
+            else table.insert(parsedColors, color[c]) end
             text = text:sub(j + 1)
             
             if count(text, "{") > 0 then bufferText = text:sub(1, text:find("{", 1, true) - 1)

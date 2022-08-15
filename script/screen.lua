@@ -1,4 +1,5 @@
 require "script/globals"
+require "script/tools"
 
 screen = {
     width = math.floor(love.graphics.getWidth() / 10),
@@ -7,14 +8,28 @@ screen = {
     current = "title",
     post = "title",
     branch = {},
+    branchData = {},
+    branchDataDefaults = {
+        inventory = {
+            page = 1,
+        },
+        battle = {
+            stage = "player",
+            text = {""},
+        },
+        inspectItem = {
+            stage = "input",
+            option = "",
+            text = "",
+        },
+        inspectItemEquipped = {
+            stage = "input",
+            option = "",
+            text = "",
+        },
+    },
     
-    pause = false,
     key = "",
-    stage = 1,
-    option = "",
-    
-    turn = "player",
-    text = "",
     item = nil,
     
     update = function(self, dt)
@@ -22,19 +37,21 @@ screen = {
         self.key = ""
     end,
     
-    up = function(self)
+    up = function(self, args)
+        args = args or {}
+        self.branchData[self.current] = nil
         self.current = self.branch[#self.branch]
-        self.text = ""
-        self.stage = 1
-        self.option = ""
+        updateTable(self.branchData[self.current], args)
         table.remove(self.branch)
     end,
     
-    upPast = function(self, name)
+    upPast = function(self, name, args)
         local nextScreen = ""
+        args = args or {}
         
         for i = #self.branch, 1, -1 do
             nextScreen = self.branch[i]
+            table.remove(self.branchData, nextScreen)
             table.remove(self.branch, i)
             if name == nextScreen then
                 nextScreen = self.branch[i - 1]
@@ -43,11 +60,27 @@ screen = {
         end
         
         self.current = nextScreen
+        updateTable(self.branchData[self.current], args)
     end,
     
-    down = function(self, name)
+    down = function(self, name, args)
+        args = args or {}
+        self.branchData[name] = deepcopy(self.branchDataDefaults[name])
+        updateTable(self.branchData[name], args)
         table.insert(self.branch, self.current)
         self.current = name
+    end,
+    
+    get = function(self, key)
+        return self.branchData[self.current][key]
+    end,
+    
+    set = function(self, key, value)
+        self.branchData[self.current][key] = value
+    end,
+    
+    add = function(self, key, value)
+        self.branchData[self.current][key] = self.branchData[self.current][key] + value
     end,
     
     
@@ -120,21 +153,41 @@ screen = {
     
     inventory = function(self)
         draw:initScreen(38, "image/inventory")
+        local playerInventory = player:get("inventory")
+        local start = (self:get("page") - 1) * 10 + 1
+        local stop = self:get("page") * 10
+        if stop > #playerInventory then stop = #playerInventory end
         
-        playerInventory = player:get("inventory")
-        for k, v in ipairs(playerInventory) do
-            if v[1]:get("stackable") then quantity = v[2]
-            else quantity = 0 end
-            
-            draw:text("(%d) %s" % {k, v[1]:display(quantity)})
+        
+        if #playerInventory == 0 then
+            draw:text("{gray68} - Empty")
+        else
+            for i = start, stop do
+                local item = playerInventory[i]
+                local inputTextPadding = #tostring(stop) - #tostring(i)
+                local inputTextPrefix = tostring(i):sub(1, #tostring(i) - 1)
+                local inputText = tostring(i):sub(-1)
+                
+                if item[1]:get("stackable") then quantity = item[2]
+                else quantity = 0 end
+                
+                draw:text("%s(%d) %s" % {
+                    inputTextPrefix, inputText, item[1]:display(quantity)
+                }, 4 + inputTextPadding)
+            end
         end
+        
+        local left = self:get("page") > 1
+        local right = self:get("page") * 10 + 1 < #playerInventory
         
         draw:newline()
         draw:text("- Press a number to select an option. Press ESC to go back.")
         
-        if isInRange(self.key, 1, #playerInventory) then
-            self.item = playerInventory[tonumber(self.key)][1]
+        if isInRange(self.key, 1, #playerInventory - start + 1) then
+            self.item = playerInventory[tonumber(self.key) + start - 1][1]
             self:down("inspectItem")
+        elseif self.key == "left" and left then self:add("page", -1)
+        elseif self.key == "right" and right then self:add("page", 1)
         elseif self.key == "escape" then self:up() end
     end,
     
@@ -176,34 +229,36 @@ screen = {
         draw:hpmp(player)
         
         draw:newline()
-        if self.turn == "player" then
-            draw:options({"Fight", "Art", "Guard", "Item", "Flee"})
+        if self:get("stage") == "player" then
+            draw:options({"Fight", "Art", "Guard", "Item", "Escape"})
             
             if self.key == "f" then
-                self.text = player:attack(enemy)
-                self.turn = "after player"
+                table.insert(self:get("text"), player:attack(enemy))
+                self:set("stage", "after player")
             end
-        elseif self.turn == "after player" then
-            draw:text(self.text)
+        elseif self:get("stage") == "after player" then
+            for k, v in self:get("text") do
+                draw:text(v)
+            end
             
             if self.key == "return" then
                 if enemy:get("hp") <= 0 then self:down("victory")
                 elseif player:get("hp") <= 0 then self:down("defeat")
-                else self.turn = "enemy" end
+                else self:set("stage", "enemy") end
             end
-        elseif self.turn == "enemy" then
+        elseif self:get("stage") == "enemy" then
             draw:text("Enemy's turn")
             
-            self.text = enemy:attack(player)
+            table.insert(self:get("text"), enemy:attack(player))
             
-            self.turn = "after enemy"
-        elseif self.turn == "after enemy" then
+            self:set("stage", "after enemy")
+        elseif self:get("stage") == "after enemy" then
             draw:text(self.text)
             
             if self.key == "return" then
                 if enemy:get("hp") <= 0 then self:down("victory")
                 elseif player:get("hp") <= 0 then self:down("defeat")
-                else self.turn = "player" end
+                else self:set("stage", "player") end
             end
         end
     end,
@@ -249,7 +304,7 @@ screen = {
         draw:top()
         draw:item(self.item)
         
-        if self.stage == 1 then
+        if self:get("stage") == "input" then
             draw:newline()
             if self.item:get("consumable") then draw:options({"Use", "Discard"})
             elseif self.item:get("equipment") then draw:options({"Equip", "Discard"})
@@ -259,18 +314,18 @@ screen = {
                 player:equip(self.item)
                 self.text = "Equipped "..self.item:display().."."
                 self.option = "e"
-                self.stage = 2
+                self:set("stage", "enter")
             elseif self.key == "u" and self.item:get("consumable") and self.item:get("target") ~= "enemy" then
                 self.text = self.item:use(player)
                 self.option = "u"
-                self.stage = 2
+                self:set("stage", "enter")
             elseif self.key == "d" then
                 player:removeItem(self.item)
                 self.text = "Discarded "..self.item:display(1).."."
                 self.option = "d"
-                self.stage = 2
+                self:set("stage", "enter")
             elseif self.key == "escape" then self:up() end
-        elseif self.stage == 2 then
+        elseif self:get("stage") == "enter" then
             draw:newline()
             draw:text(self.text)
             
@@ -282,7 +337,7 @@ screen = {
                     if not self.item:get("infinite") then player:removeItem(self.item) end
                     
                     if player:numOfItem(self.item) == 0 then self:up()
-                    else self.stage = 1 end
+                    else self:set("stage", "input") end
                 else
                     self:up()
                 end
