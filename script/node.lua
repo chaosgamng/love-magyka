@@ -60,6 +60,8 @@ function Node(class)
         end
     end
     
+    class:init()
+    
     return setmetatable(class, {
         __call = function(self, init)
             return setmetatable(init or {}, {__index = class})

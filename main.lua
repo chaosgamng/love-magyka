@@ -8,9 +8,11 @@ require "script/tools"
 require "script/world"
 
 world = World{}
-world:init()
 player = world:get("player")
 enemy = world:get("enemy")
+
+console = false
+command = ""
 
 material = Item{name="Crafting Material"}
 potion = Item{name="Health Potion", consumable=true, effect=Effect{hp={2,9}}, rarity="uncommon"}
@@ -35,17 +37,35 @@ function love.load()
     player:addItem(sword)
     player:addItem(chestplate)
     player:equip(sword)
-    
-    print(player.inventory == sword.inventory)
 end
 
 function love.keypressed(key)
-    screen.key = key
-    print(key)
+    if key == "`" then console = not console end
+    if not console then screen.key = key end
     
-    if key == "f1" then screen:down("battle") end
+    if console then
+        if ("abcdefghijklmnopqrstuvwyz"):find(key) then command = command..key
+        elseif key == "backspace" then command = command:split(1, #command - 1)
+        elseif key == "return" then
+            if command == "battle" then
+                screen.turn = "player"
+                screen:down("battle")
+            elseif command == "heal" then
+                player:set("hp", 999999999)
+                player:set("mp", 999999999)
+            end
+            
+            console = false
+        end
+    end
 end
 
 function love.draw()
     screen:update(0)
+    
+    if console then
+        draw:rect("gray18", 1, 1, screen.width, 20)
+        draw:rect("gray48", 1, 21, screen.width, 1)
+        draw:text(command, 1, 21)
+    end
 end

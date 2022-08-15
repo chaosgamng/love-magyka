@@ -120,6 +120,8 @@ draw = {
     end,
     
     rect = function(self, c, x, y, w, h)
+        if type(c) == "string" then c = color[c] end
+        
         local w = w or 1
         local h = h or 1
         
