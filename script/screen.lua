@@ -169,8 +169,8 @@ screen = {
 		local bottom = self.height - 1
 		local areaHeight = bottom - top
 		
-		local mapTiles = dumpTable(image["map/"..world:get("currentMap")])
-		print(mapTiles)
+        local mapTiles = image["map/"..world:get("currentMap")]
+		mapTiles = mapTiles:getData()
 		local mapCollision = image["map/"..world:get("currentMap").." Collision"]:getData()
 		
 		print(mapTiles, mapColision)
