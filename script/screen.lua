@@ -23,6 +23,7 @@ screen = {
 		},
         battle = {
             stage = "player",
+            enemy = {},
             text = {},
 			itemChosen = false,
 			target = "",
@@ -261,12 +262,42 @@ screen = {
     
     
     battle = function(self)
-        draw:initScreen(38, "battle/default")
-        draw:imageSide("enemy/"..enemy:get("name"))
-        draw:hpmpAlt(enemy, draw.subLeft + 2, 3)
+        draw:border(0)
+        draw:rect("gray28", 39, 1, 2, self.height)
+        draw:icon("battle/default", 41, 2, 5)
+        
+        local enemyImages = {}
+        local totalWidth = 0
+        
+        for k, v in ipairs(self:get("enemy")) do
+            enemyImages[k] = {image = image["enemy/"..v:get("name")]}
+            enemy = enemyImages[k]
+            enemy.width = math.ceil(enemy.image:getWidth() / 2)
+            enemy.height = math.ceil(enemy.image:getHeight() / 4)
+            totalWidth = totalWidth + enemy.width
+        end
+        
+        local altWidth = self.width - 42
+        local spaces = #self:get("enemy") - 1
+        local spaceBetweenEnemies = math.floor((50 - math.floor(totalWidth / 2)) / spaces)
+        print(spaceBetweenEnemies)
+        if spaceBetweenEnemies < 2 then spaceBetweenEnemies = 2 end
+        totalWidth = totalWidth + spaceBetweenEnemies * spaces
+        
+        local offset = math.floor((altWidth - totalWidth) / 2) + 42
+        
+        for k, v in ipairs(self:get("enemy")) do
+            enemy = enemyImages[k]
+            enemy.x = offset
+            enemy.y = 27 - enemy.height
+            
+            draw:icon(enemy.image, enemy.x, enemy.y, 5)
+            print(enemy.width)
+            offset = offset + enemy.width + spaceBetweenEnemies
+        end
         
         draw:top()
-        draw:hpmp(player)
+        draw:hpmp(player, 16)
         
         draw:newline()
         if self:get("stage") == "player" then

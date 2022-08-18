@@ -115,7 +115,9 @@ draw = {
             s = arg[4]
         end
         
-        if type(i) == "string" and image[i] then i = image[i] else i = image["icon/default"] end
+        if type(i) == "string" and image[i] then i = image[i]
+        elseif type(i) == "string" then i = image["icon/default"] end
+        
         love.graphics.setColor(c)
         love.graphics.draw(i, (x - 1)*self.width, (self.row - 1)*self.height, 0, s)
     end,
@@ -193,15 +195,16 @@ draw = {
         self:top()
     end,
     
-    hpmp = function(self, entity, x, y)
-        local x = x or 4
-        if y then self.row = y end
+    hpmp = function(self, entity, w)
+        local x = 4
+        local y = self.row
+        w = w or 40
         
         self:text("%s [Lvl 1 Warrior]" % {entity:get("name")}, x)
         self:icon(hp, x, self.row)
-        self:bar(entity:get("hp"), entity:get("stats").maxHp, color.hp, color.gray48, 40, "HP: ", "#", x + 2)
+        self:bar(entity:get("hp"), entity:get("stats").maxHp, color.hp, color.gray48, w, "HP: ", "#", x + 2)
         self:icon(mp, x, self.row)
-        self:bar(entity:get("mp"), entity:get("stats").maxMp, color.mp, color.gray48, 40, "MP: ", "#", x + 2)
+        self:bar(entity:get("mp"), entity:get("stats").maxMp, color.mp, color.gray48, w, "MP: ", "#", x + 2)
     end,
     
     hpmpAlt = function(self, entity, x, y)
@@ -224,7 +227,7 @@ draw = {
     end,
     
     options = function(self, options, x, y)
-        local x = x or 4
+        local x = x or 5
         if y then self.row = y end
         
         local length = #options

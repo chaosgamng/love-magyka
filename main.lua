@@ -9,7 +9,6 @@ require "script/world"
 
 world = World{}
 player = world:get("player")
-enemy = world:get("enemy")
 
 console = false
 command = ""
@@ -51,7 +50,6 @@ function love.keypressed(key)
     if key == "`" then console = not console end
     if not console then
         screen.key = key
-        print(key)
     end
     
     if console then
@@ -60,9 +58,10 @@ function love.keypressed(key)
             if #command > 1 then command = command:sub(1, #command - 1)
             elseif #command == 1 then command = "" end
         elseif key == "return" then
-            if command == "battle" then
+            if command == "b" then
                 screen.turn = "player"
                 screen:down("battle")
+                screen:set("enemy", {Entity{name="Green Slime"}, Entity{name="Enemy"}, Entity{name="Green Slime"}}, "battle")
             elseif command == "heal" then
                 player:set("hp", 999999999)
                 player:set("mp", 999999999)
