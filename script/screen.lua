@@ -1,4 +1,5 @@
 require "script/globals"
+require "script/map"
 require "script/tools"
 
 screen = {
@@ -10,6 +11,10 @@ screen = {
     branch = {},
     branchData = {},
     branchDataDefaults = {
+        map = {
+            tiles = nil,
+            collision = nil,
+        },
         inventory = {
             page = 1,
         },
@@ -160,26 +165,20 @@ screen = {
     end,
     
     map = function(self)
-        draw:initScreen((screen.height - 2) * 2 + 1)
+        draw:initScreen((screen.height - 1) * 2)
         
-		local left = draw.subLeft
-		local right = self.width - 1
-		local areaWidth = right - left
-		local top = 1
-		local bottom = self.height - 1
-		local areaHeight = bottom - top
-		
-        local mapTiles = image["map/"..world:get("currentMap")]
-		mapTiles = mapTiles:getData()
-		local mapCollision = image["map/"..world:get("currentMap").." Collision"]:getData()
-		
-		print(mapTiles, mapColision)
-		
-		for y = 1, areaHeight do
-			for x = 1, areaWidth do
-				draw:rect(x, y, 2, 1)
-			end
-		end
+        local left = draw.subLeft
+		local width = math.floor((self.width - 2 - left) / 2)
+		local top = 2
+		local height = self.height - 1 - top
+        
+        local x = world:get("playerX")
+        local y = world:get("playerY")
+        
+        map = Map{name=world:get("currentMap")}
+        map:loadData()
+        map:draw(x, y, width, height, left, top)
+        draw:rect("black", left + width + 1, top + math.floor(height / 2) + 1, 2, 1)
         
         draw:newline()
         draw:options({"Camp"})
@@ -187,7 +186,16 @@ screen = {
         draw:newline()
         draw:text("- Press a letter to select an option.")
         
-        if self.key == "c" then self:down("camp") end
+        local left = self.key == "left" or self.key == "a"
+        local right = self.key == "right" or self.key == "d"
+        local up = self.key == "up" or self.key == "w"
+        local down = self.key == "down" or self.key == "s"
+        
+        if self.key == "c" then self:down("camp")
+        elseif left  and map:get("collision", x - 1, y) then world:add("playerX", -1)
+        elseif right and map:get("collision", x + 1, y) then world:add("playerX", 1)
+        elseif up    and map:get("collision", x, y - 1) then world:add("playerY", -1)
+        elseif down  and map:get("collision", x, y + 1) then world:add("playerY", 1) end
     end,
     
     camp = function(self)

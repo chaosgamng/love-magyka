@@ -6,6 +6,6 @@ World = Node{
     enemy = Entity{name="Green Slime"},
 	
 	currentMap = "World",
-	playerX = 120,
-	playerY = 120,
+	playerX = 113,
+	playerY = 105,
 }
