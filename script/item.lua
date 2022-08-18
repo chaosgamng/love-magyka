@@ -36,7 +36,7 @@ Item = Node{
         if source == target then text = "%s uses %s, " % {source:get("name"), self:display()}
         else text = "%s uses %s on " % {source:get("name"), self:display(), target:get("name")} end
         
-        if self:get("target") == "player" or self:get("target") == "enemy" or self:get("target") == "entity" then
+        if self:get("target") == "entity" then
             if source ~= target then text = text..target:get("name")..", " end
             return target:defend(source, self:get("effect"), text)
         end

@@ -15,8 +15,8 @@ console = false
 command = ""
 
 material = Item{name="Crafting Material"}
-potion = Item{name="Health Potion", consumable=true, effect=Effect{hp={2,9}}, rarity="uncommon"}
-throwingKnife = Item{name="Throwing Knife", consumable=true, effect=Effect{hp={-4,-5}}, rarity="uncommon"}
+potion = Item{name="Health Potion", consumable=true, effect=Effect{hp={2,9}}, rarity="uncommon", target="entity"}
+throwingKnife = Item{name="Throwing Knife", consumable=true, effect=Effect{hp={-4,-5}}, rarity="uncommon", target="entity"}
 sword = Item{name="Sword", description="Wow, it's a sword! I've never seen one of these before!", equipment=true, slot="weapon", effect=Effect{hp={-2, -3}}}
 chestplate = Item{name="Chestplate", equipment=true, slot="body", stats={armor=1, maxHp=1}}
 
@@ -34,8 +34,8 @@ function love.load()
     player:addItem(material)
     player:addItem(potion)
     player:addItem(throwingKnife)
-    player:addItem(sword, 12)
-    player:addItem(chestplate, 12)
+    player:addItem(sword)
+    player:addItem(chestplate)
     player:equip(sword)
 end
 
