@@ -4,6 +4,7 @@ Map = Node{
     name = "map",
     tiles = {},
     collision = {},
+    data = {},
     background = {0, 0, 0},
     
     get = function(self, key, ...)
@@ -33,9 +34,11 @@ Map = Node{
     loadData = function(self)
         local tileFile = "map/%s.png" % {self.name}
         local collisionFile = "map/%s Collision.png" % {self.name}
+        local dataFile = "map/%s.lua" % {self.name}
         
         local tileImage = love.image.newImageData(tileFile)
         local collisionImage = love.image.newImageData(collisionFile)
+        self.data = require(dataFile)
         
         for y = 0, tileImage:getHeight() - 1 do
             local tileRow = {}
@@ -51,6 +54,19 @@ Map = Node{
             
             table.insert(self.tiles, tileRow)
             table.insert(self.collision, collisionRow)
+        end
+        
+        self.data.portalTiles = {}
+        for k, v in ipairs(self.data.portals) do
+            if v.town then
+                portal = {name=v.name, town=true}
+                self.data.portalTiles[v.y] = {}
+                self.data.portalTiles[v.y+1] = {}
+                self.data.portalTiles[v.y][v.x] = portal
+                self.data.portalTiles[v.y][v.x+1] = portal
+                self.data.portalTiles[v.y+1][v.x] = portal
+                self.data.portalTiles[v.y+1][v.x+1] = portal
+            end
         end
     end,
     

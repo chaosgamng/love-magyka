@@ -198,6 +198,21 @@ screen = {
         elseif right and map:get("collision", x + 1, y) then world:add("playerX", 1)
         elseif up    and map:get("collision", x, y - 1) then world:add("playerY", -1)
         elseif down  and map:get("collision", x, y + 1) then world:add("playerY", 1) end
+                
+        x = world:get("playerX")
+        y = world:get("playerY")
+        
+        if map.data.portalTiles[x] then
+            if map.data.portalTiles[x][y] then
+                local portal = map.data.portalTiles[x][y]
+                if portal.town then self:down("town") end
+            end
+        end
+    end,
+    
+    town = function(self)
+        draw:top()
+        draw:print("you're in a town woo")
     end,
     
     camp = function(self)
