@@ -22,10 +22,14 @@ screen = {
 			page = 1,
 		},
         battle = {
-            stage = "player",
+            turn = 1,
+            turnOrder = {},
+            stage = "prebattle",
             enemy = {},
             text = {},
+            artChosen = false,
 			itemChosen = false,
+            targetType = "",
 			target = "",
         },
         inspectItem = {
@@ -38,9 +42,6 @@ screen = {
             option = "",
             text = "",
         },
-		inspectItemBattle = {
-			stage = "input",
-		}
     },
     
     key = "",
@@ -266,6 +267,7 @@ screen = {
         draw:rect("gray28", 39, 1, 2, self.height)
         draw:icon("battle/default", 41, 2, 5)
         
+        -- Set up enemy images and spacing
         local enemyImages = {}
         local totalWidth = 0
         
@@ -280,74 +282,154 @@ screen = {
         local altWidth = self.width - 42
         local spaces = #self:get("enemy") - 1
         local spaceBetweenEnemies = math.floor((50 - math.floor(totalWidth / 2)) / spaces)
-        print(spaceBetweenEnemies)
         if spaceBetweenEnemies < 2 then spaceBetweenEnemies = 2 end
         totalWidth = totalWidth + spaceBetweenEnemies * spaces
         
         local offset = math.floor((altWidth - totalWidth) / 2) + 42
         
+        -- Draw enemies and enemy info
         for k, v in ipairs(self:get("enemy")) do
-            enemy = enemyImages[k]
+            local enemy = enemyImages[k]
             enemy.x = offset
             enemy.y = 27 - enemy.height
+            local enemyCenter = enemy.x + math.floor(enemy.width / 2)
+            local indexText = "(%d)" % {k}
+            local indexX = enemyCenter - 1
+            local nameX = enemyCenter - math.floor(#v:get("name") / 2)
+            local levelText = "[Lvl %d]" % {v:get("level")}
+            local levelX = enemyCenter - math.floor(#levelText / 2)
+            local barX = enemyCenter - 4
             
-            draw:icon(enemy.image, enemy.x, enemy.y, 5)
-            print(enemy.width)
+            if v:get("hp") > 0 then
+                draw:icon(enemy.image, enemy.x, enemy.y, 5)
+                
+                draw:text(indexText, indexX, enemy.y - 6)
+                draw:text(v:get("name"), nameX, enemy.y - 4)
+                draw:text(levelText, levelX, enemy.y - 3)
+                draw:bar(v:get("hp"), v:get("stats").maxHp, color.hp, color.gray48, 8, "", "", barX, 28)
+                draw:bar(v:get("mp"), v:get("stats").maxMp, color.mp, color.gray48, 8, "", "", barX, 29)
+            end
+            
             offset = offset + enemy.width + spaceBetweenEnemies
         end
         
         draw:top()
         draw:hpmp(player, 16)
-        
         draw:newline()
-        if self:get("stage") == "player" then
-			self:set("text", {})
-			if self:get("itemChosen") then self:set("stage", "item") end
-			
-            draw:options({"Fight", "Art", "Guard", "Item", "Escape"})
+        
+        -- Set up turn order
+        if self:get("stage") == "prebattle" then
+            self:set("stage", "input")
+            table.insert(self:get("turnOrder"), "player")
             
-            if self.key == "f" then
-                table.insert(self:get("text"), player:attack(enemy))
-                self:set("stage", "after player")
-            elseif self.key == "i" then
-				self:down("battleItem")
-			end
-		elseif self:get("stage") == "item" then
-			local target = nil
-			if self:get("target") == "player" then target = player
-			else target = enemy end
-			
-			table.insert(self:get("text"), self.item:use(player, target))
-			self:set("stage", "after player")
-			
-			self:set("itemChosen", false)
-			self:set("target", "")
-        elseif self:get("stage") == "after player" then
-            for k, v in pairs(self:get("text")) do
-                draw:text(v)
+            for k, v in ipairs(self:get("enemy")) do
+                table.insert(self:get("turnOrder"), k)
+            end
+        
+        -- Update turn order and check for victory/defeat
+        elseif self:get("stage") == "update" then
+            for i = #self:get("turnOrder"), -1, -1 do
+                if type(self:get("turnOrder")[i]) == "number" then
+                    local enemy = self:get("enemy")[self:get("turnOrder")[i]]
+                    if enemy:get("hp") <= 0 then table.remove(self:get("turnOrder"), i) end
+                end 
             end
             
-            if self.key == "return" then
-                if enemy:get("hp") <= 0 then self:down("victory")
-                elseif player:get("hp") <= 0 then self:down("defeat")
-                else self:set("stage", "enemy") end
+            if #self:get("turnOrder") == 1 and self:get("turnOrder")[1] == "player" then
+                self:down("victory")
+            elseif player:get("hp") <= 0 then
+                self:down("defeat")
+            else
+                self:add("turn", 1)
+                if self:get("turn") > #self:get("turnOrder") then self:set("turn", 1) end
+                
+                self:set("stage", "input")
             end
-        elseif self:get("stage") == "enemy" then
-			self:set("text", {})
-            draw:text("Enemy's turn")
+        
+        -- Output damage text
+        elseif self:get("stage") == "output" then
+            draw:top()
+            for k, v in pairs(self:get("text")) do draw:text(v, 42) end
+            draw:newline()
+            draw:rect(color.gray28, 43, draw.row, 13, 1)
+            draw:text("[PRESS ENTER]", 43)
+            if self.key == "return" then self:set("stage", "update") end
+        
+        -- Player's Turn
+        elseif self:get("turnOrder")[self:get("turn")] == "player" then
+            -- Choose action
+            if self:get("stage") == "input" then
+                self:set("text", {})
+                if self:get("itemChosen") then
+                    self:set("targetType", "all")
+                    self:set("stage", "target")
+                end
+                
+                draw:options({"Fight", "Art", "Guard", "Item", "Escape"})
+                
+                if self.key == "f" then
+                    self:set("targetType", "enemy")
+                    self:set("stage", "target")
+                elseif self.key == "i" then
+                    self:down("battleItem")
+                end
             
-            table.insert(self:get("text"), enemy:attack(player))
-            
-            self:set("stage", "after enemy")
-        elseif self:get("stage") == "after enemy" then
-            for k, v in pairs(self:get("text")) do
-                draw:text(v)
+            -- Choose target
+            elseif self:get("stage") == "target" then
+                if self:get("targetType") ~= "enemy" then
+                    draw:options({"Self"})
+                    draw:newline()
+                end
+                
+                local targets = {}
+                local index = 1
+                
+                for k, v in ipairs(self:get("enemy")) do
+                    if v:get("hp") > 0 then
+                        draw:rect(color.gray28, 5, draw.row, 3, 1)
+                        draw:text(" (%d) %s" % {index, v:get("name")})
+                        index = index + 1
+                        table.insert(targets, v)
+                    end
+                end
+                
+                local targetChosen = false
+                
+                if self.key == "s" and self:get("targetType") ~= "enemy" then
+                    self:set("target", player)
+                    targetChosen = true
+                elseif isInRange(self.key, 1, index) then
+                    local enemy = targets[tonumber(self.key)]
+                    if enemy:get("hp") > 0 then
+                        self:set("target", enemy)
+                        targetChosen = true
+                    end
+                elseif self.key == "escape" then self:set("stage", "input") end
+                
+                if targetChosen then
+                    if self:get("itemChosen") then
+                        table.insert(self:get("text"), self.item:use(player, self:get("target")))
+                        self:set("itemChosen", false)
+                    elseif self:get("artChosen") then
+                        -- do stuff lmao
+                        self:set("artChosen", false)
+                    else
+                        table.insert(self:get("text"), player:attack(self:get("target")))
+                    end
+                    
+                    self:set("stage", "output")
+                end
             end
+        
+        -- Enemy's Turn
+        elseif type(self:get("turnOrder")[self:get("turn")]) == "number" then
+            local enemy = self:get("enemy")[self:get("turnOrder")[self:get("turn")]]
+            print(self:get("turn"))
             
-            if self.key == "return" then
-                if enemy:get("hp") <= 0 then self:down("victory")
-                elseif player:get("hp") <= 0 then self:down("defeat")
-                else self:set("stage", "player") end
+            if self:get("stage") == "input" then
+                self:set("text", {})
+                table.insert(self:get("text"), enemy:attack(player))
+                self:set("stage", "output")
             end
         end
     end,
@@ -375,8 +457,7 @@ screen = {
     end,
     
     victory = function(self)
-        draw:initScreen(38, "enemy/"..enemy:get("name"))
-        draw:hpmpAlt(enemy, draw.subLeft + 2, 3)
+        draw:initScreen(38, "image/victory")
         
         draw:top()
         draw:hpmp(player)
@@ -388,8 +469,7 @@ screen = {
     end,
     
     defeat = function(self)
-        draw:initScreen(38, "enemy/"..enemy:get("name"))
-        draw:hpmpAlt(enemy, draw.subLeft + 2, 3)
+        draw:initScreen(38, "image/defeat")
         
         draw:top()
         draw:hpmp(player)
@@ -397,7 +477,7 @@ screen = {
         draw:newline()
         draw:text("You lost! Fuck you.")
         
-        if self.key == "return" then self:up() end
+        if self.key == "return" then self:upPast("battle") end
     end,
     
     inspectItem = function(self)
@@ -471,35 +551,16 @@ screen = {
         draw:top()
         draw:item(self.item)
 		
-		if self:get("stage") == "input" then
-			draw:newline()
-			draw:options({"Use"})
-			
-			if self.key == "u" and self.item:get("consumable") then
-				self:set("stage", "select target")
-			elseif self.key == "escape" then
-				self:set("itemChosen", false)
-				self:up()
-			end
-		elseif self:get("stage") == "select target" then
-			draw:newline()
-			draw:options({"Self", "Enemy"})
-			
-			if self.key == "s" then
-				self:set("target", "player", "battle")
-				self:set("itemChosen", true, "battle")
-				if not self.item:get("infinite") then player:removeItem(self.item) end
-				self:upPast("battleItem")
-			elseif self.key == "e" then
-				self:set("target", "enemy", "battle")
-				self:set("itemChosen", true, "battle")
-				if not self.item:get("infinite") then player:removeItem(self.item) end
-				self:upPast("battleItem")
-			elseif self.key == "escape" then
-				self:set("itemChosen", false, "battle")
-				self:set("stage", "input")
-			end
-		end
+        draw:newline()
+        draw:options({"Use"})
+        
+        if self.key == "u" and self.item:get("consumable") then
+            self:set("itemChosen", true, "battle")
+            self:upPast("battleItem")
+        elseif self.key == "escape" then
+            self:set("itemChosen", false, "battle")
+            self:up()
+        end
 	end,
 	
     crafting = function(self)

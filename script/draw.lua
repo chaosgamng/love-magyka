@@ -85,7 +85,7 @@ draw = {
             i = i + string.len(v)
         end
         
-        for k, v in pairs(parsedIcons) do self:icon(v, k + 3) end
+        for k, v in pairs(parsedIcons) do self:icon(v, k + x - 1) end
         
         self.row = self.row + 1
     end,
@@ -242,6 +242,7 @@ draw = {
     bar = function(self, current, maximum, fillColor, emptyColor, width, label, form, x, y)
         local x = x or 4
         if y then self.row = y end
+        local label = label or ""
         
         if current == 0 or current == maximum then
             if current == 0 then c = emptyColor else c = fillColor end
@@ -265,6 +266,8 @@ draw = {
             labelText = label..tostring(math.ceil(current / maximum * 100)).."%"
         elseif form == "#" or form == "number" then
             labelText = label.."%d/%d" % {current, maximum}
+        else
+            labelText = ""
         end
         
         self:text(labelText, x + width + 1)

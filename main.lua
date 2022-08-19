@@ -16,7 +16,7 @@ command = ""
 material = Item{name="Crafting Material"}
 potion = Item{name="Health Potion", consumable=true, effect=Effect{hp={2,9}}, rarity="uncommon", target="entity"}
 throwingKnife = Item{name="Throwing Knife", consumable=true, effect=Effect{hp={-4,-5}}, rarity="uncommon", target="entity"}
-sword = Item{name="Sword", description="Wow, it's a sword! I've never seen one of these before!", equipment=true, slot="weapon", effect=Effect{hp={-2, -3}}}
+sword = Item{name="Sword", description="Wow, it's a sword! I've never seen one of these before!", equipment=true, slot="weapon", effect=Effect{hp={-10, -10}}}
 chestplate = Item{name="Chestplate", equipment=true, slot="body", stats={armor=1, maxHp=1}}
 
 function love.load()
@@ -44,7 +44,7 @@ function love.keypressed(key)
     end
     
     if key == "f2" then
-        print(dumpTable(screen.branchData))
+        print(screen:get("turn"), screen:get("stage"))
     end
 
     if key == "`" then console = not console end
@@ -61,7 +61,7 @@ function love.keypressed(key)
             if command == "b" then
                 screen.turn = "player"
                 screen:down("battle")
-                screen:set("enemy", {Entity{name="Green Slime"}, Entity{name="Enemy"}, Entity{name="Green Slime"}}, "battle")
+                screen:set("enemy", {Entity{name="Green Slime"}, Entity{name="Enemy"}, Entity{name="Green Slime"}, Entity{name="Green Slime"}}, "battle")
             elseif command == "heal" then
                 player:set("hp", 999999999)
                 player:set("mp", 999999999)

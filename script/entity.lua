@@ -132,10 +132,13 @@ Entity = Node{
         
         if self:isEquipped("weapon") then
             effect = weapon:get("effect")
-            text = "%s %s %s, " % {self:get("name"), weapon:get("verb"), target:get("name")}
+            local verb = weapon:get("verb")
+            if verb == "" then verb = self:get("attackText") end
+            
+            text = "%s %s %s, " % {self:get("name"), verb, target:get("name")}
         else
             effect = Effect{hp={-1, -1}}
-            text = "%s attacks %s, " % {self:get("name"), target:get("name")}
+            text = "%s %s %s, " % {self:get("name"), self:get("attackText"), target:get("name")}
         end
         
         return target:defend(self, effect, text)
@@ -191,6 +194,16 @@ Entity = Node{
         self.stats["maxMp"] = 7
         self.baseStats["maxMp"] = 7
         self.mp = 7
+    end,
+    
+    get = function(self, key)
+        if key == "title" then
+            local class = ""
+            if self:get("class") then class = " "..self:get("class") end
+            return "%s [Lvl %d%s]" % {self:get("name"), self:get("level"), class}
+        else
+            return self[key]
+        end
     end,
     
     set = function(self, key, value)
