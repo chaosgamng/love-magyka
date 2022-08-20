@@ -34,7 +34,7 @@ Map = Node{
     loadData = function(self)
         local tileFile = "map/%s.png" % {self.name}
         local collisionFile = "map/%s Collision.png" % {self.name}
-        local dataFile = "map/%s.lua" % {self.name}
+        local dataFile = "map/"..self.name
         
         local tileImage = love.image.newImageData(tileFile)
         local collisionImage = love.image.newImageData(collisionFile)

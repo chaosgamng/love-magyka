@@ -202,9 +202,9 @@ screen = {
         x = world:get("playerX")
         y = world:get("playerY")
         
-        if map.data.portalTiles[x] then
-            if map.data.portalTiles[x][y] then
-                local portal = map.data.portalTiles[x][y]
+        if map.data.portalTiles[y] then
+            if map.data.portalTiles[y][x] then
+                local portal = map.data.portalTiles[y][x]
                 if portal.town then self:down("town") end
             end
         end
@@ -212,7 +212,7 @@ screen = {
     
     town = function(self)
         draw:top()
-        draw:print("you're in a town woo")
+        draw:text("you're in a town woo")
     end,
     
     camp = function(self)
