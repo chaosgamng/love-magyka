@@ -1,6 +1,7 @@
 require "script/globals"
-require "script/map"
 require "script/tools"
+require "script/node/map"
+require "script/node/town"
 
 screen = {
     width = math.floor(love.graphics.getWidth() / 10),
@@ -14,6 +15,15 @@ screen = {
         map = {
             tiles = nil,
             collision = nil,
+            portal = nil,
+        },
+        town = {
+            town = nil,
+            store = "",
+            storeType = "",
+        },
+        store = {
+            page = 1,
         },
         inventory = {
             page = 1,
@@ -205,18 +215,57 @@ screen = {
         if map.data.portalTiles[y] then
             if map.data.portalTiles[y][x] then
                 local portal = map.data.portalTiles[y][x]
-                if portal.town then self:down("town") end
+                if portal.town then
+                    world:set("playerX", portal.x + 1)
+                    world:set("playerY", portal.y + 2)
+                    self:set("portal", portal)
+                    self:down("town")
+                end
             end
         end
     end,
     
     town = function(self)
-        draw:top()
-        draw:text("you're in a town woo")
+        if self:get("town") == nil then
+            self:set("town", newTown(self:get("portal", "map").name))
+        end
+        
+        draw:initScreen(38, "screen/town")
+        
+        draw:mainStats(player)
+        
+        draw:newline()
+        local storeNames = self:get("town").storeNames
+        local storeTypes = self:get("town").storeTypes
+        draw:optionsNumbered(storeNames)
+        
+        if isInRange(self.key, 1, #storeNames) then
+            local storeType = storeTypes[tonumber(self.key)]
+            self:set("store", self:get("town").stores[storeType])
+            self:set("storeType", storeType)
+            self:down("store")
+        elseif self.key == "escape" then self:up() end
+    end,
+    
+    store = function(self)
+        local store = self:get("store", "town")
+        
+        draw:initScreen(38, "screen/"..self:get("storeType", "town"))
+        
+        local option, index = self:pages(store.items, function(item) if item:get("stackable") then return item:display(1) else return item:display() end end)
+        
+        draw:newline()
+        draw:text("- Press a number to select an option. Press ESC to go back.")
+        
+        if option then
+            
+        elseif self.key == "left" and left then self:add("page", -1)
+        elseif self.key == "right" and right then self:add("page", 1)
+        elseif self.key == "escape" then self:up() end
     end,
     
     camp = function(self)
-        draw:initScreen(38, "image/camp")
+        draw:initScreen(38, "screen/camp")
         
         draw:mainStats(player)
         
@@ -233,7 +282,7 @@ screen = {
     end,
     
     inventory = function(self)
-        draw:initScreen(38, "image/inventory")
+        draw:initScreen(38, "screen/inventory")
 
 		local option, index = self:pages(player:get("inventory"), function(item) if item[1]:get("stackable") then return item[1]:display(item[2]) else return item[1]:display() end end)
         
@@ -249,7 +298,7 @@ screen = {
     end,
     
     equipment = function(self)
-        draw:initScreen(38, "image/equipment")
+        draw:initScreen(38, "screen/equipment")
         
         playerEquipment = player:get("equipment")
         local i = 0
@@ -343,7 +392,7 @@ screen = {
         
         -- Update turn order and check for victory/defeat
         elseif self:get("stage") == "update" then
-            for i = #self:get("turnOrder"), -1, -1 do
+            for i = #self:get("turnOrder"), 1, -1 do
                 if type(self:get("turnOrder")[i]) == "number" then
                     local enemy = self:get("enemy")[self:get("turnOrder")[i]]
                     if enemy:get("hp") <= 0 then table.remove(self:get("turnOrder"), i) end
@@ -423,13 +472,13 @@ screen = {
                 
                 if targetChosen then
                     if self:get("itemChosen") then
-                        table.insert(self:get("text"), self.item:use(player, self:get("target")))
+                        appendTable(self:get("text"), self.item:use(player, self:get("target")))
                         self:set("itemChosen", false)
                     elseif self:get("artChosen") then
                         -- do stuff lmao
                         self:set("artChosen", false)
                     else
-                        table.insert(self:get("text"), player:attack(self:get("target")))
+                        appendTable(self:get("text"), player:attack(self:get("target")))
                     end
                     
                     self:set("stage", "output")
@@ -439,11 +488,10 @@ screen = {
         -- Enemy's Turn
         elseif type(self:get("turnOrder")[self:get("turn")]) == "number" then
             local enemy = self:get("enemy")[self:get("turnOrder")[self:get("turn")]]
-            print(self:get("turn"))
             
             if self:get("stage") == "input" then
                 self:set("text", {})
-                table.insert(self:get("text"), enemy:attack(player))
+                appendTable(self:get("text"), enemy:attack(player))
                 self:set("stage", "output")
             end
         end
@@ -454,7 +502,7 @@ screen = {
     end,
     
     battleItem = function(self)
-		draw:initScreen(38, "image/inventory")
+		draw:initScreen(38, "screen/inventory")
 		
 		inventory = player:get("inventory")
 		itemList = {}
@@ -472,7 +520,7 @@ screen = {
     end,
     
     victory = function(self)
-        draw:initScreen(38, "image/victory")
+        draw:initScreen(38, "screen/victory")
         
         draw:top()
         draw:hpmp(player)
@@ -484,7 +532,7 @@ screen = {
     end,
     
     defeat = function(self)
-        draw:initScreen(38, "image/defeat")
+        draw:initScreen(38, "screen/defeat")
         
         draw:top()
         draw:hpmp(player)
@@ -496,7 +544,7 @@ screen = {
     end,
     
     inspectItem = function(self)
-        draw:initScreen(38, "image/inspectItem")
+        draw:initScreen(38, "screen/inspectItem")
         draw:imageSide("item/"..self.item:get("name"), "item/default")
         
         draw:top()
@@ -544,7 +592,7 @@ screen = {
     end,
     
     inspectItemEquipped = function(self)
-        draw:initScreen(38, "image/inspectItem")
+        draw:initScreen(38, "screen/inspectItem")
         draw:imageSide("item/"..self.item:get("name"), "item/default")
         
         draw:top()
@@ -560,7 +608,7 @@ screen = {
     end,
     
 	inspectItemBattle = function(self)
-		draw:initScreen(38, "image/inspectItem")
+		draw:initScreen(38, "screen/inspectItem")
         draw:imageSide("item/"..self.item:get("name"), "item/default")
         
         draw:top()
@@ -579,7 +627,7 @@ screen = {
 	end,
 	
     crafting = function(self)
-        draw:initScreen(38, "image/crafting")
+        draw:initScreen(38, "screen/crafting")
         
         draw:text("Please purchase the crafting DLC for $99.99!")
         

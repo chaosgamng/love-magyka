@@ -133,8 +133,8 @@ draw = {
     end,
     
     image = function(self, i, x, y)
-        local i = i or "image/default"
-        if not image[i] then i = "image/default" end
+        local i = i or "screen/default"
+        if not image[i] then i = "screen/default" end
         self:icon(i, x, y, 8)
     end,
     
@@ -153,10 +153,14 @@ draw = {
     item = function(self, item)
         self:text(item:display(0))
         self:newline()
-        self:text(item:get("description"))
+        for k, v in ipairs(item:get("description")) do self:text(v) end
         
         local effect = item:get("effect")
-        if effect then self:effect(effect) end
+        if effect then
+            for k, v in ipairs(effect) do
+                self:effect(v)
+            end
+        end
         
         self:newline()
         self:text("<gp> %d" % {item:get("value")})
@@ -191,7 +195,7 @@ draw = {
     initScreen = function(self, subWidth, i)
         self:top()
         self:border(subWidth)
-        self:image(i, self.subLeft, 2, color.white)
+        self:image(i, self.subLeft, 2)
         self:top()
     end,
     
@@ -201,17 +205,17 @@ draw = {
         w = w or 40
         
         self:text("%s [Lvl 1 Warrior]" % {entity:get("name")}, x)
-        self:icon(hp, x, self.row)
+        self:icon("icon/hp", x, self.row)
         self:bar(entity:get("hp"), entity:get("stats").maxHp, color.hp, color.gray48, w, "HP: ", "#", x + 2)
-        self:icon(mp, x, self.row)
+        self:icon("icon/mp", x, self.row)
         self:bar(entity:get("mp"), entity:get("stats").maxMp, color.mp, color.gray48, w, "MP: ", "#", x + 2)
     end,
     
     hpmpAlt = function(self, entity, x, y)
         self:text(entity:get("name"), x, y)
-        self:icon(hp, x, self.row)
+        self:icon("icon/hp", x, self.row)
         self:bar(entity:get("hp"), entity:get("stats").maxHp, color.hp, color.gray48, 20, "HP: ", "%", x + 2)
-        self:icon(mp, x, self.row)
+        self:icon("icon/mp", x, self.row)
         self:bar(entity:get("mp"), entity:get("stats").maxMp, color.mp, color.gray48, 20, "MP: ", "%", x + 2)
     end,
     
@@ -219,10 +223,10 @@ draw = {
         local x = x or 4
         if y then self.row = y end
         
-        self:hpmp(entity, x)
-        self:icon(xp, x, self.row)
+        self:hpmp(entity)
+        self:icon("icon/xp", x, self.row)
         self:bar(entity:get("xp"), entity:get("maxXp"), color.xp, color.gray48, 40, "XP: ", "#", x + 2)
-        self:icon(gp, x, self.row)
+        self:icon("icon/gp", x, self.row)
         self:text("Gold: %d" % {entity:get("gp")}, x + 2)
     end,
     
@@ -235,6 +239,19 @@ draw = {
         
         for k, v in pairs(options) do
             self:text("[%s] %s" % {v:sub(1, 1), v}, x)
+            if k < length then self:text("|", x + 1, self.row) end
+        end
+    end,
+    
+    optionsNumbered = function(self, options, x, y)
+        local x = x or 5
+        if y then self.row = y end
+        
+        local length = #options
+        self:rect(color.gray28, x, self.row, 3, length * 2 - 1)
+        
+        for k, v in pairs(options) do
+            self:text("(%d) %s" % {k, v}, x)
             if k < length then self:text("|", x + 1, self.row) end
         end
     end,

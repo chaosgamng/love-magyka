@@ -5,33 +5,9 @@ function Node(class)
         if type(v) == "table" then class[k] = deepcopy(v) end
     end
     
-    class.add_component = function(self, name, component)
-        if self.components == nil then self.components = {} end
-        
-        table.insert(self.components, name)
-        self[name] = component
-    end
-    class.update_components = function(self, dt)
-        for _, v in pairs(self.components) do
-            if self[v].update ~= nil then self[v]:update(dt) end
-        end
-    end
-    class.draw_components = function(self)
-        for _, v in pairs(self.components) do
-            if self[v].draw ~= nil then self[v]:draw() end
-        end
-    end
-    
-    if not class.update then
-        class.update = function(self, dt) self:update_components(dt) end
-    end
-    if not class.draw then
-        class.draw = function(self) self:draw_components() end
-    end
     if not class.init then
         class.init = function(self) return nil end
     end
-    
     if not class.get then
         class.get = function(self, key)
             if self[key] then return self[key] else return nil end
@@ -58,6 +34,9 @@ function Node(class)
             elseif round == "floor" then self:set(key, math.floor(value))
             else self:set(key, value) end
         end
+    end
+    if not class.export then
+        class.export = function(self) return export(self) end
     end
     
     class:init()

@@ -1,6 +1,7 @@
-require "script/node"
+require "script/node/node"
 
 Map = Node{
+    classType = "map",
     name = "map",
     tiles = {},
     collision = {},
@@ -59,7 +60,7 @@ Map = Node{
         self.data.portalTiles = {}
         for k, v in ipairs(self.data.portals) do
             if v.town then
-                portal = {name=v.name, town=true}
+                portal = v
                 self.data.portalTiles[v.y] = {}
                 self.data.portalTiles[v.y+1] = {}
                 self.data.portalTiles[v.y][v.x] = portal

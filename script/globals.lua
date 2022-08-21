@@ -46,8 +46,3 @@ extraStats = {
     "waterDamage",
     "waterResistance",
 }
-
-hp = "icon/hp"
-mp = "icon/mp"
-xp = "icon/xp"
-gp = "icon/gp"

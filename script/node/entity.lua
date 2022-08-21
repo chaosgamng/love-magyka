@@ -1,9 +1,10 @@
-require "script/effect"
 require "script/globals"
-require "script/node"
+require "script/node/effect"
+require "script/node/node"
 require "script/tools"
 
 Entity = Node{
+    classType = "entity",
     hp = 0,
     mp = 0,
     xp = 0,
@@ -137,7 +138,7 @@ Entity = Node{
             
             text = "%s %s %s, " % {self:get("name"), verb, target:get("name")}
         else
-            effect = Effect{hp={-1, -1}}
+            effect = {Effect{hp={-1, -1}}}
             text = "%s %s %s, " % {self:get("name"), self:get("attackText"), target:get("name")}
         end
         
@@ -145,26 +146,34 @@ Entity = Node{
     end,
     
     defend = function(self, source, effect, text)
-        local hp = 0
-        local mp = 0
-        local passive = false
+        local prefix = text
+        local text = {}
         
-        if effect:get("hp") then
-            hp = rand(effect:get("hp"))
-        elseif effect:get("mp") then
-            mp = rand(effect:get("mp"))
+        for k, e in ipairs(effect) do
+            local line = prefix
+            local hp = 0
+            local mp = 0
+            local passive = false
+            
+            if e:get("hp") then
+                hp = rand(e:get("hp"))
+            elseif e:get("mp") then
+                mp = rand(e:get("mp"))
+            end
+            
+            if hp < 0 and mp < 0 then line = line.."dealing <hp>{hp} %d {white}and <mp>{mp} %d {white}damage." % {math.abs(hp), math.abs(mp)}
+            elseif hp < 0 then line = line.."dealing <hp>{hp} %d {white}damage." % {math.abs(hp)}
+            elseif mp < 0 then line = line.."dealing <hp>{hp} %d {white}damage." % {math.abs(mp)} end
+            
+            if hp > 0 and mp > 0 then line = line.."healing <hp>{hp} %d {white}and <mp>{mp} %d{white}." % {math.abs(hp), math.abs(mp)}
+            elseif hp > 0 then line = line.."healing <hp>{hp} %d{white}." % {math.abs(hp)}
+            elseif mp > 0 then line = line.."healing <hp>{hp} %d{white}." % {math.abs(mp)} end
+            
+            self:add("hp", hp)
+            self:add("mp", mp)
+            
+            table.insert(text, line)
         end
-        
-        if hp < 0 and mp < 0 then text = text.."dealing <hp>{hp} %d {white}and <mp>{mp} %d {white}damage." % {math.abs(hp), math.abs(mp)}
-        elseif hp < 0 then text = text.."dealing <hp>{hp} %d {white}damage." % {math.abs(hp)}
-        elseif mp < 0 then text = text.."dealing <hp>{hp} %d {white}damage." % {math.abs(mp)} end
-        
-        if hp > 0 and mp > 0 then text = text.."healing <hp>{hp} %d {white}and <mp>{mp} %d{white}." % {math.abs(hp), math.abs(mp)}
-        elseif hp > 0 then text = text.."healing <hp>{hp} %d{white}." % {math.abs(hp)}
-        elseif mp > 0 then text = text.."healing <hp>{hp} %d{white}." % {math.abs(mp)} end
-        
-        self:add("hp", hp)
-        self:add("mp", mp)
         
         return text
     end,

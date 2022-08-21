@@ -1,50 +1,38 @@
 require "script/color"
 require "script/draw"
-require "script/entity"
 require "script/globals"
-require "script/item"
+require "script/node/entity"
+require "script/node/item"
+require "script/node/world"
 require "script/screen"
 require "script/tools"
-require "script/world"
+
+require "library/Tserial"
 
 world = World{}
 player = world:get("player")
 
 console = false
+editor = false
 command = ""
 
-material = Item{name="Crafting Material"}
-potion = Item{name="Health Potion", consumable=true, effect=Effect{hp={2,9}}, rarity="uncommon", target="entity"}
-throwingKnife = Item{name="Throwing Knife", consumable=true, effect=Effect{hp={-4,-5}}, rarity="uncommon", target="entity"}
-sword = Item{name="Sword", description="Wow, it's a sword! I've never seen one of these before!", equipment=true, slot="weapon", effect=Effect{hp={-10, -10}}}
-chestplate = Item{name="Chestplate", equipment=true, slot="body", stats={armor=1, maxHp=1}}
-
 function love.load()
-    font = love.graphics.newImageFont("img/imagefont.png",
+    font = love.graphics.newImageFont("image/imagefont.png",
         " abcdefghijklmnopqrstuvwxyz" ..
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ0" ..
         "123456789.,!?-+/():;%&`'*#=[]\"|")
     love.graphics.setFont(font)
     love.graphics.setBackgroundColor(color.gray18)
     math.randomseed(os.time())
-    
-    -- TEMP
-    
-    player:addItem(material)
-    player:addItem(potion)
-    player:addItem(throwingKnife)
-    player:addItem(sword)
-    player:addItem(chestplate)
-    player:equip(sword)
 end
 
 function love.keypressed(key)
     if key == "f1" then
-        screen.item:set("value", 999)
+        print(dumpTable(newItem("Sword")))
     end
     
     if key == "f2" then
-        print(screen:get("turn"), screen:get("stage"))
+        player:equip(newItem("Dual Knives"))
     end
 
     if key == "`" then console = not console end
@@ -61,10 +49,15 @@ function love.keypressed(key)
             if command == "b" then
                 screen.turn = "player"
                 screen:down("battle")
-                screen:set("enemy", {Entity{name="Green Slime"}, Entity{name="Enemy"}, Entity{name="Green Slime"}, Entity{name="Green Slime"}}, "battle")
+                screen:set("enemy", {Entity{name="Green Slime"}, Entity{name="Enemy"}, Entity{name="Orange Slime"}, Entity{name="Blue Slime"}}, "battle")
             elseif command == "heal" then
                 player:set("hp", 999999999)
                 player:set("mp", 999999999)
+            elseif command == "editor" then
+                for k, v in pairs(require("script/editor")) do screen[k] = v end
+                screen.current = "editorMain"
+                screen.branch = {}
+                screen.bracnData = {}
             end
             
             command = ""

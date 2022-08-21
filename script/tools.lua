@@ -8,6 +8,25 @@ getmetatable("").__mod = function(a, b)
     end
 end
 
+function export(class)
+    local t = {}
+    local mt = getmetatable(class).__index
+    updateTable(mt, class)
+    
+    for k, v in pairs(mt) do
+        if type(v) == "table" then
+            local nested = v
+            if v[export] then nested = v:export() end
+            
+            t[k] = nested
+        elseif type(v) ~= "function" then
+            t[k] = v
+        end
+    end
+    
+    return t
+end
+
 function dumpTable(o)
    if type(o) == 'table' then
       local s = '{ '
@@ -25,8 +44,19 @@ function updateTable(t1, t2)
     for k, v in pairs(t2) do t1[k] = v end
 end
 
+function appendTable(t1, t2)
+    for k, v in pairs(t2) do table.insert(t1, v) end
+end
+
 function rand(range)
-    return math.random(range[1], range[2])
+    local a = range[1]
+    local b = range[2]
+    if a > b then
+        a = range[2]
+        b = range[1]
+    end
+    
+    return math.random(a, b)
 end
 
 function isInRange(str, low, high)

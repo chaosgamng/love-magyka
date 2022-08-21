@@ -1,7 +1,8 @@
-require "script/entity"
-require "script/node"
+require "script/node/entity"
+require "script/node/node"
 
 World = Node{
+    classType = "world",
     player = Entity{name="Player"},
 	
 	currentMap = "World",

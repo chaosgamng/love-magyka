@@ -18,10 +18,10 @@ local function getFiles(rootPath, tree)
   return tree
 end
 
-local imageNames = getFiles("img")
+local imageNames = getFiles("image")
 
 for i = 1, #imageNames do
     path = imageNames[i]
-    key = path:sub(5, #path-4)
+    key = path:sub(7, #path-4)
     image[key] = love.graphics.newImage(path)
 end

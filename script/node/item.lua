@@ -1,8 +1,9 @@
-require "script/effect"
-require "script/node"
+require "script/node/effect"
+require "script/node/node"
 require "script/tools"
 
 Item = Node{
+    classType = "item",
     name = "item",
     description = "description",
     rarity = "common",
@@ -42,3 +43,23 @@ Item = Node{
         end
     end,
 }
+
+function newItem(arg)
+    if type(arg) == "string" then
+        local item = newItem(require("data/item")[arg])
+        
+        if item then return item else return Item{name=arg} end
+    elseif type(arg) == "table" then
+        local item = deepcopy(arg)
+        
+        if item.effect then
+            if item.effect[1] == nil then item.effect = {item.effect} end
+            
+            for k, v in ipairs(item.effect) do
+                item.effect[k] = newEffect(v)
+            end
+        end
+        
+        return Item(item)
+    end
+end
