@@ -105,6 +105,8 @@ Entity = Node{
         self:unequip(slot)
         self.equipment[slot] = item
         self:removeItem(item)
+        
+        self:update()
     end,
     
     unequip = function(self, a)
@@ -116,6 +118,8 @@ Entity = Node{
             self:addItem(self.equipment[slot])
             self.equipment[slot] = ""
         end
+        
+        self:update()
     end,
     
     isEquipped = function(self, slot)
@@ -125,6 +129,42 @@ Entity = Node{
     
     -- BATTLING / STATS
     
+    
+    update = function(self)
+        local stats = {}
+        local statChanges = {}
+        for k, v in pairs(self:get("stats")) do statChanges[k] = {["+"] = 0, ["*"] = 100, ["="] = false} end
+        
+        for k, v in pairs(self:get("equipment")) do
+            if v ~= "" and v:get("stats") then
+                for _, stat in pairs(v:get("stats")) do table.insert(stats, stat) end
+            end
+        end
+        
+        for k, v in pairs(stats) do
+            if v.opp == "=" then
+                if statChanges[v.stat]["="] and v.value < statChanges[v.stat]["="] then
+                    statChanges[v.stat]["="] = v.value end
+            elseif v.opp == "*" then
+                statChanges[v.stat]["*"] = statChanges[v.stat]["*"] + v.value
+            else
+                statChanges[v.stat]["+"] = statChanges[v.stat]["+"] + v.value
+            end
+        end
+        
+        for k, v in pairs(statChanges) do
+            local baseStat = self:get("baseStats")[k]
+            local stat = baseStat
+            stat = stat + v["+"]
+            stat = stat + math.ceil(baseStat * ((v["*"] - 100) / 100))
+            if v["="] then stat = v["="] end
+            
+            self:get("stats")[k] = stat
+        end
+        
+        if self:get("hp") > self:get("stats").maxHp then self:set("hp", self:get("stats").maxHp) end
+        if self:get("mp") > self:get("stats").maxMp then self:set("mp", self:get("stats").maxMp) end
+    end,
     
     attack = function(self, target)
         local weapon = self.equipment["weapon"]
@@ -200,9 +240,9 @@ Entity = Node{
         self.stats["maxHp"] = 7
         self.baseStats["maxHp"] = 7
         self.hp = 7
-        self.stats["maxMp"] = 7
-        self.baseStats["maxMp"] = 7
-        self.mp = 7
+        self.stats["maxMp"] = 10
+        self.baseStats["maxMp"] = 10
+        self.mp = 10
     end,
     
     get = function(self, key)

@@ -28,13 +28,13 @@ end
 
 function love.keypressed(key)
     if key == "f1" then
-        print(dumpTable(newItem("Sword")))
+        player:equip(newItem("Chestplate"))
     end
     
     if key == "f2" then
-        player:equip(newItem("Dual Knives"))
+        print(dumpTable(player:get("stats")))
     end
-
+    
     if key == "`" then console = not console end
     if not console then
         screen.key = key
@@ -74,4 +74,6 @@ function love.draw()
         draw:rect("gray48", 1, 21, screen.width, 1)
         draw:text(command, 2, 21)
     end
+    
+    love.timer.sleep(1/60)
 end

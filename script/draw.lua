@@ -150,8 +150,8 @@ draw = {
     -- Compound
     
     
-    item = function(self, item)
-        self:text(item:display(0))
+    item = function(self, item, quantity)
+        self:text(item:display(quantity))
         self:newline()
         for k, v in ipairs(item:get("description")) do self:text(v) end
         

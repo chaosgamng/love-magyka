@@ -10,7 +10,7 @@ Item = Node{
     value = 1,
     stackable = true,
     equipment = false,
-    stats = {},
+    stats = nil,
     slot = "",
     consumable = false,
     effect = nil,
@@ -33,12 +33,13 @@ Item = Node{
     use = function(self, source, target)
         target = target or source
         local text = ""
-        
+            
         if source == target then text = "%s uses %s, " % {source:get("name"), self:display()}
         else text = "%s uses %s on " % {source:get("name"), self:display(), target:get("name")} end
         
         if self:get("target") == "entity" then
             if source ~= target then text = text..target:get("name")..", " end
+            
             return target:defend(source, self:get("effect"), text)
         end
     end,
@@ -48,7 +49,12 @@ function newItem(arg)
     if type(arg) == "string" then
         local item = newItem(require("data/item")[arg])
         
-        if item then return item else return Item{name=arg} end
+        if item then
+            item.name = arg
+            return item
+        else
+            return Item{name=arg}
+        end
     elseif type(arg) == "table" then
         local item = deepcopy(arg)
         
@@ -57,6 +63,12 @@ function newItem(arg)
             
             for k, v in ipairs(item.effect) do
                 item.effect[k] = newEffect(v)
+            end
+        end
+        
+        if item.stats then
+            for k, v in pairs(item.stats) do
+                if type(v) ~= "table" then item.stats[k] = {stat = k, value = v, opp = "+"} end
             end
         end
         

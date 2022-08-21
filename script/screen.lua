@@ -44,8 +44,13 @@ screen = {
         },
         inspectItem = {
             stage = "input",
+            quantity = 1,
             option = "",
             text = "",
+        },
+        inspectItemStore = {
+            stage = "input",
+            quantity = 0,
         },
         inspectItemEquipped = {
             stage = "input",
@@ -148,7 +153,7 @@ screen = {
         draw:top()
         
         local magyka = {
-            "  x*8888x.:d8888:.:d888b                                        ,688889,                    ",
+            "  .x8888x.:d8888:.:d888b                                        ,688889,                    ",
             " X'  98888X:`88888:`8888!                           8L           !8888!                     ",
             "X8x.  8888X   888X  8888!                          8888!   .dL   '8888   ..                 ",
             "X8888 X8888   8888  8888'    .uu689u.   .uu6889u.  `Y888k:*888.   8888 d888L    .uu689u.    ",
@@ -258,7 +263,8 @@ screen = {
         draw:text("- Press a number to select an option. Press ESC to go back.")
         
         if option then
-            
+            self.item = store.items[index]
+            self:down("inspectItemStore")
         elseif self.key == "left" and left then self:add("page", -1)
         elseif self.key == "right" and right then self:add("page", 1)
         elseif self.key == "escape" then self:up() end
@@ -548,7 +554,9 @@ screen = {
         draw:imageSide("item/"..self.item:get("name"), "item/default")
         
         draw:top()
-        draw:item(self.item)
+        local quantity = 0
+        if self.item:get("stackable") then quantity = player:numOfItem(self.item) end
+        draw:item(self.item, quantity)
         
         if self:get("stage") == "input" then
             draw:newline()
@@ -556,38 +564,118 @@ screen = {
             elseif self.item:get("equipment") then draw:options({"Equip", "Discard"})
             else draw:options({"Discard"}) end
             
+            draw:newline()
+            draw:text("- Press a key to select an option.")
+            
             if self.key == "e" and self.item:get("equipment") then
                 player:equip(self.item)
-                self.text = "Equipped "..self.item:display().."."
-                self.option = "e"
-                self:set("stage", "enter")
+                self:set("stage", "equip")
             elseif self.key == "u" and self.item:get("consumable") then
-                self.text = self.item:use(player)
-                self.option = "u"
-                self:set("stage", "enter")
-            elseif self.key == "d" then
-                player:removeItem(self.item)
-                self.text = "Discarded "..self.item:display(1).."."
-                self.option = "d"
-                self:set("stage", "enter")
+                self:set("text", self.item:use(player))
+                if not self.item:get("infinite") then player:removeItem(self.item) end
+                self:set("stage", "use")
+            elseif self.key == "d" then self:set("stage", "discard")
             elseif self.key == "escape" then self:up() end
-        elseif self:get("stage") == "enter" then
+        
+        
+        elseif self:get("stage") == "equip" then
             draw:newline()
-            draw:text(self.text)
+            draw:text("Equipped "..self.item:display()..".")
             
             draw:newline()
             draw:text("- Press [ENTER] to continue.")
             
-            if self.key == "return" or self.key == "escape" then
-                if ("eu"):find(self.option) then
-                    if not self.item:get("infinite") then player:removeItem(self.item) end
-                    
-                    if player:numOfItem(self.item) == 0 then self:up()
-                    else self:set("stage", "input") end
-                else
-                    self:up()
-                end
-            end
+            if self.key == "escape" or self.key == "return" then self:up() end
+        
+        
+        elseif self:get("stage") == "use" then
+            draw:newline()
+            for k, v in ipairs(self:get("text")) do draw:text(v) end
+            
+            draw:newline()
+            draw:text("- Press [ENTER] to continue.")
+            
+            if self.key == "escape" or self.key == "return" then self:set("stage", "output") end
+        
+        
+        elseif self:get("stage") == "discard" then
+            draw:newline()
+            draw:text("- Press [LEFT] to select minimum. Press [RIGHT] to select maximum.")
+            draw:text("  Press [UP] and [DOWN] to change quantity. Press [ENTER] to discard.")
+            
+            local maxDiscard = player:numOfItem(self.item)
+            
+            draw:newline()
+            draw:text("Currently seleced: {gp}%d{white} (Max: %d)." % {self:get("quantity"), maxDiscard})
+            
+            if self.key == "left" and maxDiscard ~= 0 then self:set("quantity", 1)
+            elseif self.key == "right" and maxDiscard ~= 0 then self:set("quantity", maxDiscard)
+            elseif self.key == "up" and self:get("quantity") < maxDiscard then self:add("quantity", 1)
+            elseif self.key == "down" and self:get("quantity") > 1 then self:add("quantity", -1)
+            elseif self.key == "return" and maxDiscard ~= 0 then
+                player:removeItem(self.item, self:get("quantity"))
+                self:set("quantity", 1)
+                self:set("stage", "discard output")
+            elseif self.key == "escape" then self:set("stage", "input") end
+        
+        
+        elseif self:get("stage") == "discard output" then
+            local discardText = ""
+            if quantity == 1 and not self.item:get("stackable") then discardText = self.item:display()
+            else discardText = self.item:display(self:get("quantity")) end
+            
+            draw:newline()
+            draw:text("Discarded %s." % {discardText})
+            
+            draw:newline()
+            draw:text("- Press [ENTER] to continue.")
+            
+            if self.key == "escape" or self.key == "return" then self:set("stage", "output") end
+        
+        
+        elseif self:get("stage") == "output" then
+            if player:numOfItem(self.item) == 0 then self:up()
+            else self:set("stage", "input") end
+        end
+    end,
+    
+    inspectItemStore = function(self)
+        draw:initScreen(38, "screen/inspectItem")
+        draw:imageSide("item/"..self.item:get("name"), "item/default")
+        
+        draw:top()
+        draw:item(self.item)
+        
+        draw:newline()
+        draw:text("- Press [LEFT] to select minimum. Press [RIGHT] to select maximum.")
+        draw:text("  Press [UP] and [DOWN] to change quantity. Press [ENTER] to buy.")
+        
+        local maxBuy = math.floor(player:get("gp") / self.item:get("value"))
+        draw:newline()
+        draw:text("Currently seleced: {gp}%d{white} (Max: %d)." % {self:get("quantity"), maxBuy})
+        
+        if self:get("stage") == "input" then
+            if self.key == "left" and maxBuy ~= 0 then self:set("quantity", 1)
+            elseif self.key == "right" and maxBuy ~= 0 then self:set("quantity", maxBuy)
+            elseif self.key == "up" and self:get("quantity") < maxBuy then self:add("quantity", 1)
+            elseif self.key == "down" and self:get("quantity") > 1 then self:add("quantity", -1)
+            elseif self.key == "return" and maxBuy ~= 0 then
+                player:addItem(newItem(self.item), self:get("quantity"))
+                player:add("gp", -self:get("quantity") * self.item:get("value"))
+                self:set("stage", "output")
+            elseif self.key == "escape" then self:up() end
+        elseif self:get("stage") == "output" then
+            local buyText = ""
+            if quantity == 1 and not self.item:get("stackable") then buyText = self.item:display()
+            else buyText = self.item:display(self:get("quantity")) end
+            
+            draw:newline()
+            draw:text("Bought %s." % {buyText})
+            
+            draw:newline()
+            draw:text("- Press [ENTER] to continue.")
+            
+            if self.key == "escape" or self.key == "return" then self:up() end
         end
     end,
     

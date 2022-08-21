@@ -4,6 +4,7 @@ Effect = Node{
     classType = "effect",
     hp = {0, 0},
     mp = {0, 0},
+    crit = 0,
     passive = nil,
 }
 
