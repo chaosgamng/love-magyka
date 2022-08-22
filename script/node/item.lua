@@ -5,7 +5,7 @@ require "script/tools"
 Item = Node{
     classType = "item",
     name = "item",
-    description = "description",
+    description = {"description"},
     rarity = "common",
     value = 1,
     stackable = true,
@@ -15,7 +15,8 @@ Item = Node{
     consumable = false,
     effect = nil,
     target = "entity",
-    verb = "",
+    verb = "uses",
+    preposition = "on",
     
     display = function(self, quantity)
         quantity = quantity or 0
@@ -34,8 +35,8 @@ Item = Node{
         target = target or source
         local text = ""
             
-        if source == target then text = "%s uses %s, " % {source:get("name"), self:display()}
-        else text = "%s uses %s on " % {source:get("name"), self:display(), target:get("name")} end
+        if source == target then text = "%s %s %s, " % {source:get("name"), self:get("verb"), self:display()}
+        else text = "%s %s %s %s " % {source:get("name"), self:get("verb"), self:display(), self:get("preposition"), target:get("name")} end
         
         if self:get("target") == "entity" then
             if source ~= target then text = text..target:get("name")..", " end

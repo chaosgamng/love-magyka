@@ -60,21 +60,23 @@ Entity = Node{
     end,
     
     addItem = function(self, item, quantity)
-        local quantity = quantity or 1
-        item = deepcopy(item)
-        item:update()
-        
-        if self:numOfItem(item) > 0 and item:get("stackable") then
-            for k, v in ipairs(self.inventory) do
-                if v[1] == item then
-                    v[2] = v[2] + quantity
-                    break
+        if item then
+            local quantity = quantity or 1
+            item = deepcopy(item)
+            item:update()
+            
+            if self:numOfItem(item) > 0 and item:get("stackable") then
+                for k, v in ipairs(self.inventory) do
+                    if v[1] == item then
+                        v[2] = v[2] + quantity
+                        break
+                    end
                 end
+            elseif item:get("stackable") then
+                table.insert(self.inventory, {item, quantity})
+            else
+                for i = 1, quantity do table.insert(self.inventory, {item, 1}) end
             end
-        elseif item:get("stackable") then
-            table.insert(self.inventory, {item, quantity})
-        else
-            for i = 1, quantity do table.insert(self.inventory, {item, 1}) end
         end
     end,
     
@@ -195,22 +197,63 @@ Entity = Node{
             local mp = 0
             local passive = false
             
-            if e:get("hp") then
-                hp = rand(e:get("hp"))
-            elseif e:get("mp") then
-                mp = rand(e:get("mp"))
+            if e:get("hp") then hp = rand(e:get("hp")) end
+            if e:get("mp") then mp = rand(e:get("mp")) end
+            
+            local miss = false
+            local dodge = false
+            
+            if source ~= self or (source == self and (hp < 0 or mp < 0)) then
+                if rand(1, 100) < 100 - source:get("stats").hit then
+                    miss = true
+                    line = line.."but %s dodges." % {self:get("name")}
+                elseif rand(1, 100) < self:get("stats").dodge then
+                    dodge = true
+                    line = line.."but misses."
+                end
+            end
+                
+            local crit = 1
+            if hp < 0 or mp < 0 then
+                if rand(1, 100) < source:get("stats").crit - self:get("stats").resistance then crit = crit + (source:get("stats").critDamage / 100) end
+                if hp < 0 then
+                    hp = math.floor((hp - (self:get("stats").armor / 2) - self:get("stats").vitality) * crit)
+                    if hp > -1 then hp = -1 end
+                end
+                
+                if mp < 0 then
+                    mp = math.floor((mp - self:get("stats").vitality) * crit)
+                    if mp > -1 then mp = -1 end
+                end
             end
             
-            if hp < 0 and mp < 0 then line = line.."dealing <hp>{hp} %d {white}and <mp>{mp} %d {white}damage." % {math.abs(hp), math.abs(mp)}
-            elseif hp < 0 then line = line.."dealing <hp>{hp} %d {white}damage." % {math.abs(hp)}
-            elseif mp < 0 then line = line.."dealing <hp>{hp} %d {white}damage." % {math.abs(mp)} end
-            
-            if hp > 0 and mp > 0 then line = line.."healing <hp>{hp} %d {white}and <mp>{mp} %d{white}." % {math.abs(hp), math.abs(mp)}
-            elseif hp > 0 then line = line.."healing <hp>{hp} %d{white}." % {math.abs(hp)}
-            elseif mp > 0 then line = line.."healing <hp>{hp} %d{white}." % {math.abs(mp)} end
-            
-            self:add("hp", hp)
-            self:add("mp", mp)
+            if not dodge and not miss then
+                if crit > 1 then crit = " critical "
+                else crit = "" end
+                
+                if hp < 0 and mp < 0 then line = line.."dealing <hp>{hp} %d {white}and <mp>{mp} %d {white}%sdamage." % {math.abs(hp), crit, math.abs(mp)}
+                elseif hp < 0 then line = line.."dealing <hp>{hp} %d {white}%sdamage." % {math.abs(hp), crit}
+                elseif mp < 0 then line = line.."dealing <mp>{mp} %d {white}%sdamage." % {math.abs(mp), crit} end
+                
+                if hp > 0 and mp > 0 and self:get("hp") == self:get("stats").maxHp and self:get("mp") == self:get("stats").maxMp then
+                    hp = 0
+                    mp = 0
+                    line = line.."doing nothing."
+                elseif hp > 0 and mp == 0 and self:get("hp") == self:get("stats").maxHp then
+                    hp = 0
+                    line = line.."doing nothing."
+                elseif mp > 0 and hp == 0 and self:get("mp") == self:get("stats").maxMp then
+                    mp = 0
+                    line = line.."doing nothing."
+                else
+                    if hp > 0 and mp > 0 then line = line.."healing <hp>{hp} %d {white}and <mp>{mp} %d{white}." % {math.abs(hp), math.abs(mp)}
+                    elseif hp > 0 then line = line.."healing <hp>{hp} %d{white}." % {math.abs(hp)}
+                    elseif mp > 0 then line = line.."healing <mp>{mp} %d{white}." % {math.abs(mp)} end
+                end
+                
+                self:add("hp", hp)
+                self:add("mp", mp)
+            end
             
             table.insert(text, line)
         end
@@ -227,9 +270,22 @@ Entity = Node{
             self.equipment[v] = ""
         end
         
+        local baseStats = {
+            maxHp = 7,
+            maxMp = 10,
+            hit = 95,
+            dodge = 4,
+            crit = 4,
+        }
+        
         for k, v in ipairs(stats) do
-            self.stats[v] = 0
-            self.baseStats[v] = 0
+            if baseStats[v] then
+                self.stats[v] = baseStats[v]
+                self.baseStats[v] = baseStats[v]
+            else
+                self.stats[v] = 0
+                self.baseStats[v] = 0
+            end
         end
         
         for k, v in ipairs(extraStats) do
@@ -237,12 +293,8 @@ Entity = Node{
             self.baseStats[v] = 0
         end
         
-        self.stats["maxHp"] = 7
-        self.baseStats["maxHp"] = 7
-        self.hp = 7
-        self.stats["maxMp"] = 10
-        self.baseStats["maxMp"] = 10
-        self.mp = 10
+        self.hp = baseStats.maxHp
+        self.mp = baseStats.maxMp
     end,
     
     get = function(self, key)

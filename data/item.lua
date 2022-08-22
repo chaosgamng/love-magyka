@@ -36,7 +36,7 @@ return {
         rarity = "common",
         equipment = true,
         slot = "body",
-        stats = {armor = 1, maxHp = 1},
+        stats = {armor = 100, maxHp = 1},
     },
     ["Wheat Biscuit"] = {
         description = {"Stale and harder than rock, it's a favorite alternative", "currency for the locals."},

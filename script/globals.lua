@@ -13,7 +13,7 @@ equipment = {
 stats = {
     "maxHp",
     "maxMp",
-    "might",
+    "strength",
     "intelligence",
     "vitality",
     "armor",
@@ -21,6 +21,7 @@ stats = {
     "hit",
     "dodge",
     "crit",
+    "critDamage",
     "luck",
 }
 

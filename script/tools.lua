@@ -48,12 +48,23 @@ function appendTable(t1, t2)
     for k, v in pairs(t2) do table.insert(t1, v) end
 end
 
-function rand(range)
-    local a = range[1]
-    local b = range[2]
+function rand(...)
+    local arg = {...}
+    local a = 0
+    local b = 1
+    
+    if #arg == 1 then
+        a = arg[1][1]
+        b = arg[1][2]
+    else
+        a = arg[1]
+        b = arg[2]
+    end
+    
     if a > b then
-        a = range[2]
-        b = range[1]
+        local buffer = a
+        a = b
+        b = buffer
     end
     
     return math.random(a, b)

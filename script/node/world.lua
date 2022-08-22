@@ -8,4 +8,8 @@ World = Node{
 	currentMap = "World",
 	playerX = 113,
 	playerY = 105,
+    
+    init = function(self)
+        self.player:update()
+    end,
 }

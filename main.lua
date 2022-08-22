@@ -24,17 +24,14 @@ function love.load()
     love.graphics.setFont(font)
     love.graphics.setBackgroundColor(color.gray18)
     math.randomseed(os.time())
+    
+    player:addItem(newItem("Throwing Knife"), 100)
+    player:addItem(newItem("Health Potion"), 100)
+    
+    player:equip(newItem("chestplate"))
 end
 
 function love.keypressed(key)
-    if key == "f1" then
-        player:equip(newItem("Chestplate"))
-    end
-    
-    if key == "f2" then
-        print(dumpTable(player:get("stats")))
-    end
-    
     if key == "`" then console = not console end
     if not console then
         screen.key = key
@@ -49,7 +46,7 @@ function love.keypressed(key)
             if command == "b" then
                 screen.turn = "player"
                 screen:down("battle")
-                screen:set("enemy", {Entity{name="Green Slime"}, Entity{name="Enemy"}, Entity{name="Orange Slime"}, Entity{name="Blue Slime"}}, "battle")
+                screen:set("enemy", {Entity{name="Green Slime"}, Entity{name="Enemy"}}, "battle")
             elseif command == "heal" then
                 player:set("hp", 999999999)
                 player:set("mp", 999999999)
