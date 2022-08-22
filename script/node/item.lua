@@ -73,6 +73,9 @@ function newItem(arg)
             end
         end
         
-        return Item(item)
+        item = Item(item)
+        item:update()
+        
+        return item
     end
 end

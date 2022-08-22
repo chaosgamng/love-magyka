@@ -1,5 +1,6 @@
 require "script/globals"
 require "script/node/effect"
+require "script/node/item"
 require "script/node/node"
 require "script/tools"
 
@@ -13,22 +14,14 @@ Entity = Node{
     
     name = "name",
     level = 1,
+    
+    attackEffect = nil,
     attackText = "attacks",
     
     stats = {},
     baseStats = {},
     
-    equipment = {
-        weapon = "",
-        shield = "",
-        helmet = "",
-        body = "",
-        hands = "",
-        legs = "",
-        feet = "",
-        ring = "",
-        acc = "",
-    },
+    equipment = {},
     inventory = {},
     
     levelUp = function(self)
@@ -50,9 +43,14 @@ Entity = Node{
         else name = item:get("name") end
         
         for k, v in ipairs(self.inventory) do
-            if v[1]:get("name") == name then
-                if v[1]:get("stackable") then quantity = v[2]
-                else quantity = quantity + 1 end
+            if v[1]:get("stackable") and v[1]:get("name") == name then
+                quantity = v[2]
+                break
+            elseif not v[1]:get("stackable") and type(item) == "string" then
+                quantity = quantity + 1
+            elseif not v[1]:get("stackable") and type(item) == "table" then
+                quantity = 1
+                break
             end
         end
         
@@ -75,7 +73,7 @@ Entity = Node{
             elseif item:get("stackable") then
                 table.insert(self.inventory, {item, quantity})
             else
-                for i = 1, quantity do table.insert(self.inventory, {item, 1}) end
+                for i = 1, quantity do print("h"); table.insert(self.inventory, {deepcopy(item), 1}) end
             end
         end
     end,
@@ -102,13 +100,15 @@ Entity = Node{
     
     equip = function(self, item)
         local slot = item:get("slot")
-        item:update()
-        
-        self:unequip(slot)
-        self.equipment[slot] = item
-        self:removeItem(item)
-        
-        self:update()
+        if slot then
+            item:update()
+            
+            self:unequip(slot)
+            self.equipment[slot] = item
+            self:removeItem(item)
+            
+            self:update()
+        end
     end,
     
     unequip = function(self, a)
@@ -170,7 +170,7 @@ Entity = Node{
     
     attack = function(self, target)
         local weapon = self.equipment["weapon"]
-        local effect = ""
+        local effect = {}
         local text = ""
         
         if self:isEquipped("weapon") then
@@ -180,8 +180,17 @@ Entity = Node{
             
             text = "%s %s %s, " % {self:get("name"), verb, target:get("name")}
         else
-            effect = {Effect{hp={-1, -1}}}
+            effect = {newEffect(self:get("attackEffect"))}
             text = "%s %s %s, " % {self:get("name"), self:get("attackText"), target:get("name")}
+        end
+        
+        for k, e in ipairs(effect) do
+            if e.hp then
+                e.hp[1] = e.hp[1] - self:get("stats").strength
+                e.hp[2] = e.hp[2] - self:get("stats").strength
+            end
+            
+            if e.crit == nil then e.crit = e.critBonus + self:get("stats").crit end
         end
         
         return target:defend(self, effect, text)
@@ -217,12 +226,12 @@ Entity = Node{
             if hp < 0 or mp < 0 then
                 if rand(1, 100) < source:get("stats").crit - self:get("stats").resistance then crit = crit + (source:get("stats").critDamage / 100) end
                 if hp < 0 then
-                    hp = math.floor((hp - (self:get("stats").armor / 2) - self:get("stats").vitality) * crit)
+                    hp = math.floor((hp + (self:get("stats").armor / 2) + self:get("stats").vitality) * crit)
                     if hp > -1 then hp = -1 end
                 end
                 
                 if mp < 0 then
-                    mp = math.floor((mp - self:get("stats").vitality) * crit)
+                    mp = math.floor((mp + self:get("stats").vitality) * crit)
                     if mp > -1 then mp = -1 end
                 end
             end
@@ -246,6 +255,9 @@ Entity = Node{
                     mp = 0
                     line = line.."doing nothing."
                 else
+                    if hp ~= 0 then hp = self:get("stats").maxHp - self:get("hp") end
+                    if mp ~= 0 then mp = self:get("stats").maxMp - self:get("mp") end
+                    
                     if hp > 0 and mp > 0 then line = line.."healing <hp>{hp} %d {white}and <mp>{mp} %d{white}." % {math.abs(hp), math.abs(mp)}
                     elseif hp > 0 then line = line.."healing <hp>{hp} %d{white}." % {math.abs(hp)}
                     elseif mp > 0 then line = line.."healing <mp>{mp} %d{white}." % {math.abs(mp)} end
@@ -264,38 +276,6 @@ Entity = Node{
     
     -- CLASS FUNCTION OVERRIDES
     
-    
-    init = function(self)
-        for k, v in ipairs(equipment) do
-            self.equipment[v] = ""
-        end
-        
-        local baseStats = {
-            maxHp = 7,
-            maxMp = 10,
-            hit = 95,
-            dodge = 4,
-            crit = 4,
-        }
-        
-        for k, v in ipairs(stats) do
-            if baseStats[v] then
-                self.stats[v] = baseStats[v]
-                self.baseStats[v] = baseStats[v]
-            else
-                self.stats[v] = 0
-                self.baseStats[v] = 0
-            end
-        end
-        
-        for k, v in ipairs(extraStats) do
-            self.stats[v] = 0
-            self.baseStats[v] = 0
-        end
-        
-        self.hp = baseStats.maxHp
-        self.mp = baseStats.maxMp
-    end,
     
     get = function(self, key)
         if key == "title" then
@@ -330,3 +310,80 @@ Entity = Node{
         end 
     end,
 }
+
+function newEntity(arg)
+    if type(arg) == "string" then
+        local entity = newEntity(require("data/entity")[arg])
+        
+        if entity then
+            entity.name = arg
+            return entity
+        else
+            return Entity{name=arg}
+        end
+    elseif type(arg) == "table" then
+        local entity = deepcopy(arg)
+        
+        if entity.inventory then
+            for k, v in ipairs(entity.inventory) do
+                v[1] = newItem(v[1])
+            end
+        end
+        
+        if entity.equipment then
+            for k, v in pairs(entity.equipment) do
+                if v ~= "" then entity.equipment[k] = newItem(entity.equipment[k]) end
+            end
+        else
+            entity.equipment = {}
+            for k, v in ipairs(equipment) do entity.equipment[v] = "" end
+        end
+        
+        if entity.attackEffect then entity.attackEffect = newEffect(entity.attackEffect)
+        else entity.attackEffect = newEffect({hp={-1, -1}}) end
+        
+        local defaultStats = {
+            maxHp = 7,
+            maxMp = 10,
+            hit = 95,
+            dodge = 4,
+            crit = 4,
+        }
+        
+        if entity.baseStats then
+            for k, v in pairs(defaultStats) do
+                if not entity.baseStats[k] then entity.baseStats[k] = v end
+            end
+        else
+            entity.baseStats = defaultStats
+        end
+        
+        entity.stats = {}
+        
+        for k, v in ipairs(stats) do
+            if entity.baseStats[v] then
+                entity.stats[v] = entity.baseStats[v]
+            else
+                entity.stats[v] = 0
+                entity.baseStats[v] = 0
+            end
+        end
+        
+        for k, v in ipairs(extraStats) do
+            if entity.baseStats[v] then
+                entity.stats[v] = entity.baseStats[v]
+            else
+                entity.stats[v] = 0
+                entity.baseStats[v] = 0
+            end
+        end
+        
+        if not entity.hp then entity.hp = entity.baseStats.maxHp end
+        if not entity.mp then entity.mp = entity.baseStats.maxMp end
+        
+        entity = Entity(entity)
+        entity:update()
+        
+        return entity
+    end
+end

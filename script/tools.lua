@@ -1,11 +1,7 @@
 getmetatable("").__mod = function(a, b)
-    if not b then
-        return a
-    elseif type(b) == "table" then
-        return string.format(a, unpack(b))
-    else
-        return string.format(a, b)
-    end
+    if not b then return a
+    elseif type(b) == "table" then return string.format(a, unpack(b))
+    else return string.format(a, b) end
 end
 
 function export(class)
@@ -48,6 +44,20 @@ function appendTable(t1, t2)
     for k, v in pairs(t2) do table.insert(t1, v) end
 end
 
+function sliceTable(t, first, last, step)
+    local first = first or 1
+    local last = last or #t
+    local step = step or 1
+    
+    local sliced = {}
+    
+    for i = first, last, step do
+        table.insert(sliced, t[i])
+    end
+    
+    return sliced
+end 
+
 function rand(...)
     local arg = {...}
     local a = 0
@@ -77,6 +87,32 @@ end
 
 function count(str, subString)
     return select(2, str:gsub(subString, ""))
+end
+
+function split(str, sep, num)
+    local sep = sep or " "
+    local num = num or false
+    local start = 1
+    local t = {}
+    
+    while true do
+        local first, last = string.find(str, sep, start, true)
+        if not first then
+            table.insert(t, string.sub(str, start))
+            break
+        end
+        table.insert(t, string.sub(str, start, first - 1))
+        start = last + 1
+    end
+    
+    if num ~= false then
+        local t1 = sliceTable(t, 1, num)
+        table.insert(t1, table.concat(sliceTable(t, num + 1), sep))
+        
+        t = t1
+    end
+    
+    return t
 end
 
 function deepcopy(orig)

@@ -2,9 +2,10 @@ require "script/node/node"
 
 Effect = Node{
     classType = "effect",
-    hp = {0, 0},
-    mp = {0, 0},
-    crit = 0,
+    hp = nil,
+    mp = nil,
+    crit = nil,
+    critBonus = 0,
     passive = nil,
 }
 

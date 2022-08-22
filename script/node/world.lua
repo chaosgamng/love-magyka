@@ -3,7 +3,7 @@ require "script/node/node"
 
 World = Node{
     classType = "world",
-    player = Entity{name="Player"},
+    player = newEntity({name="Player"}),
 	
 	currentMap = "World",
 	playerX = 113,

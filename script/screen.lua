@@ -28,6 +28,9 @@ screen = {
         inventory = {
             page = 1,
         },
+        inventorySell = {
+        
+        },
 		battleItem = {
 			page = 1,
 		},
@@ -45,8 +48,11 @@ screen = {
         inspectItem = {
             stage = "input",
             quantity = 1,
-            option = "",
             text = "",
+        },
+        inspectItemSell = {
+            stage = "input",
+            quantity = 1,
         },
         inspectItemStore = {
             stage = "input",
@@ -144,7 +150,23 @@ screen = {
 		if isInRange(self.key, 1, #list - start + 1) then return tonumber(self.key), tonumber(self.key) + start - 1 else return nil, nil end
 	end,
 	
-	
+	quantity = function(self, maximum, confirmFunction, cancelFunction)
+        draw:newline()
+        draw:text("- Press [LEFT] to select minimum. Press [RIGHT] to select maximum.")
+        draw:text("  Press [UP] and [DOWN] to change quantity. Press [ENTER] to confirm.")
+        
+        draw:newline()
+        draw:text("Currently seleced: {gp}%d{white} (Max: %d)." % {self:get("quantity"), maximum})
+        
+        if self.key == "left" and maximum ~= 0 then self:set("quantity", 1)
+        elseif self.key == "right" and maximum ~= 0 then self:set("quantity", maximum)
+        elseif self.key == "up" and self:get("quantity") < maximum then self:add("quantity", 1)
+        elseif self.key == "down" and self:get("quantity") > 1 then self:add("quantity", -1)
+        elseif self.key == "return" and maximum ~= 0 then confirmFunction()
+        elseif self.key == "escape" then cancelFunction() end
+    end,
+    
+    
     -- SCREENS --
     
     
@@ -259,14 +281,22 @@ screen = {
         
         local option, index = self:pages(store.items, function(item) if item:get("stackable") then return item:display(1) else return item:display() end end)
         
+        if store.sell then
+            text:newline()
+            draw:options({"Sell"})
+        end
+        
         draw:newline()
-        draw:text("- Press a number to select an option. Press ESC to go back.")
+        draw:text("- Press a number or letter to select an option.")
+        draw:text("  Press [LEFT] and [RIGHT] to navigate pages. Press [ESC] to go back.")
         
         if option then
             self.item = store.items[index]
             self:down("inspectItemStore")
         elseif self.key == "left" and left then self:add("page", -1)
         elseif self.key == "right" and right then self:add("page", 1)
+        elseif self.key == "s" and store.sell then
+            self:down("inventorySell")
         elseif self.key == "escape" then self:up() end
     end,
     
@@ -298,6 +328,22 @@ screen = {
         if option then
             self.item = player:get("inventory")[index][1]
             self:down("inspectItem")
+        elseif self.key == "left" and left then self:add("page", -1)
+        elseif self.key == "right" and right then self:add("page", 1)
+        elseif self.key == "escape" then self:up() end
+    end,
+    
+    inventorySell = function(self)
+        draw:initScreen(38, "screen/inventory")
+
+		local option, index = self:pages(player:get("inventory"), function(item) if item[1]:get("stackable") then return item[1]:display(item[2]) else return item[1]:display() end end)
+        
+        draw:newline()
+        draw:text("- Press a number to select an option. Press ESC to go back.")
+		
+        if option then
+            self.item = player:get("inventory")[index][1]
+            self:down("inspectItemSell")
         elseif self.key == "left" and left then self:add("page", -1)
         elseif self.key == "right" and right then self:add("page", 1)
         elseif self.key == "escape" then self:up() end
@@ -351,8 +397,11 @@ screen = {
         
         local altWidth = self.width - 42
         local spaces = #self:get("enemy") - 1
-        local spaceBetweenEnemies = math.floor((50 - math.floor(totalWidth / 2)) / spaces)
-        if spaceBetweenEnemies < 2 then spaceBetweenEnemies = 2 end
+        
+        local spaceBetweenEnemies = 2
+        if spaces == 0 then spaceBetweenEnemies = 0
+        else spacebetweenEnemies = 16 - (spaces * 2) end
+        
         totalWidth = totalWidth + spaceBetweenEnemies * spaces
         
         local offset = math.floor((altWidth - totalWidth) / 2) + 42
@@ -574,14 +623,20 @@ screen = {
                 self:set("text", self.item:use(player))
                 if not self.item:get("infinite") then player:removeItem(self.item) end
                 self:set("stage", "use")
-            elseif self.key == "d" then self:set("stage", "discard")
+            elseif self.key == "d" then
+                if self.item:get("stackable") then
+                    self:set("stage", "discard")
+                else
+                    player:removeItem(self.item)
+                    self:set("quantity", 0)
+                    self:set("stage", "discard output")
+                end
             elseif self.key == "escape" then self:up() end
         
         
         elseif self:get("stage") == "equip" then
             draw:newline()
             draw:text("Equipped "..self.item:display()..".")
-            
             draw:newline()
             draw:text("- Press [ENTER] to continue.")
             
@@ -599,24 +654,7 @@ screen = {
         
         
         elseif self:get("stage") == "discard" then
-            draw:newline()
-            draw:text("- Press [LEFT] to select minimum. Press [RIGHT] to select maximum.")
-            draw:text("  Press [UP] and [DOWN] to change quantity. Press [ENTER] to discard.")
-            
-            local maxDiscard = player:numOfItem(self.item)
-            
-            draw:newline()
-            draw:text("Currently seleced: {gp}%d{white} (Max: %d)." % {self:get("quantity"), maxDiscard})
-            
-            if self.key == "left" and maxDiscard ~= 0 then self:set("quantity", 1)
-            elseif self.key == "right" and maxDiscard ~= 0 then self:set("quantity", maxDiscard)
-            elseif self.key == "up" and self:get("quantity") < maxDiscard then self:add("quantity", 1)
-            elseif self.key == "down" and self:get("quantity") > 1 then self:add("quantity", -1)
-            elseif self.key == "return" and maxDiscard ~= 0 then
-                player:removeItem(self.item, self:get("quantity"))
-                self:set("quantity", 1)
-                self:set("stage", "discard output")
-            elseif self.key == "escape" then self:set("stage", "input") end
+            self:quantity(player:numOfItem(self.item), function() self:set("stage", "discard output") end, function() self:set("stage", "input") end)
         
         
         elseif self:get("stage") == "discard output" then
@@ -626,7 +664,6 @@ screen = {
             
             draw:newline()
             draw:text("Discarded %s." % {discardText})
-            
             draw:newline()
             draw:text("- Press [ENTER] to continue.")
             
@@ -634,8 +671,63 @@ screen = {
         
         
         elseif self:get("stage") == "output" then
-            if player:numOfItem(self.item) == 0 then self:up()
+            player:removeItem(self.item, self:get("quantity"))
+            
+            if player:numOfItem(self.item) == 0 or not self.item:get("stackable") then self:up()
             else self:set("stage", "input") end
+        end
+    end,
+    
+    inspectItemSell = function(self)
+        draw:initScreen(38, "screen/inspectItem")
+        draw:imageSide("item/"..self.item:get("name"), "item/default")
+        
+        draw:top()
+        local quantity = 0
+        if self.item:get("stackable") then quantity = player:numOfItem(self.item) end
+        draw:item(self.item, quantity)
+        
+        if self:get("stage") == "input" then
+            draw:newline()
+            draw:options({"Sell"})
+            draw:newline()
+            draw:text("- Press a key to select an option. Press [ESC] to go back.")
+            
+            if self.key == "s" then
+                if self.item:get("stackable") then
+                    self:set("stage", "sell")
+                else
+                    player:removeItem(self.item)
+                    self:set("quantity", 0)
+                    self:set("stage", "sell output")
+                end
+            elseif self.key == "escape" then self:up() end
+        
+        
+        elseif self:get("stage") == "sell" then
+            self:quantity(player:numOfItem(self.item), function() self:set("stage", "sell output") end, function() self:set("stage", "input") end)
+        
+        
+        elseif self:get("stage") == "sell output" then
+            local sellText = ""
+            if quantity == 1 and not self.item:get("stackable") then sellText = self.item:display()
+            else sellText = self.item:display(self:get("quantity")) end
+            
+            local sellValue = math.ceil(self.item:get("value") * quantity * 0.67)
+            sellText = sellText.." for <gp>{gp}%d{white}." % {sellValue}
+            
+            draw:newline()
+            draw:text("Sold %s." % {sellText})
+            draw:newline()
+            draw:text("- Press [ENTER] to continue.")
+            
+            if self.key == "escape" or self.key == "return" then
+                player:removeItem(self.item, self:get("quantity"))
+                player:add("gp", sellValue)
+                
+                if player:numOfItem(self.item) == 0 or not self.item:get("stackable") then self:up()
+                else self:set("stage", "input") end
+            end
         end
     end,
     
@@ -646,24 +738,11 @@ screen = {
         draw:top()
         draw:item(self.item)
         
-        draw:newline()
-        draw:text("- Press [LEFT] to select minimum. Press [RIGHT] to select maximum.")
-        draw:text("  Press [UP] and [DOWN] to change quantity. Press [ENTER] to buy.")
-        
-        local maxBuy = math.floor(player:get("gp") / self.item:get("value"))
-        draw:newline()
-        draw:text("Currently seleced: {gp}%d{white} (Max: %d)." % {self:get("quantity"), maxBuy})
-        
         if self:get("stage") == "input" then
-            if self.key == "left" and maxBuy ~= 0 then self:set("quantity", 1)
-            elseif self.key == "right" and maxBuy ~= 0 then self:set("quantity", maxBuy)
-            elseif self.key == "up" and self:get("quantity") < maxBuy then self:add("quantity", 1)
-            elseif self.key == "down" and self:get("quantity") > 1 then self:add("quantity", -1)
-            elseif self.key == "return" and maxBuy ~= 0 then
-                player:addItem(newItem(self.item), self:get("quantity"))
-                player:add("gp", -self:get("quantity") * self.item:get("value"))
-                self:set("stage", "output")
-            elseif self.key == "escape" then self:up() end
+            local maxBuy = math.floor(player:get("gp") / self.item:get("value"))
+            self:quantity(maxBuy, function() self:set("stage", "output") end, function() self:up() end)
+        
+        
         elseif self:get("stage") == "output" then
             local buyText = ""
             if quantity == 1 and not self.item:get("stackable") then buyText = self.item:display()
@@ -671,11 +750,14 @@ screen = {
             
             draw:newline()
             draw:text("Bought %s." % {buyText})
-            
             draw:newline()
             draw:text("- Press [ENTER] to continue.")
             
-            if self.key == "escape" or self.key == "return" then self:up() end
+            if self.key == "escape" or self.key == "return" then
+                player:addItem(newItem(self.item), self:get("quantity"))
+                player:add("gp", -self:get("quantity") * self.item:get("value"))
+                self:up()
+            end
         end
     end,
     
