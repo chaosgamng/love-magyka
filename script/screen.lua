@@ -225,17 +225,22 @@ screen = {
         draw:newline()
         draw:text("- Press a letter to select an option.")
         
-        local left = self.key == "left" or self.key == "a"
-        local right = self.key == "right" or self.key == "d"
-        local up = self.key == "up" or self.key == "w"
-        local down = self.key == "down" or self.key == "s"
+        local left = input.left[2]
+        local right = input.right[2]
+        local up = input.up[2]
+        local down = input.down[2]
         
-        if self.key == "c" then self:down("camp")
-        elseif left  and map:get("collision", x - 1, y) then world:add("playerX", -1)
-        elseif right and map:get("collision", x + 1, y) then world:add("playerX", 1)
-        elseif up    and map:get("collision", x, y - 1) then world:add("playerY", -1)
-        elseif down  and map:get("collision", x, y + 1) then world:add("playerY", 1) end
-                
+        if self.key == "c" then self:down("camp") end
+        if left  and map:get("collision", x - 1, y) then world:add("playerX", -1) end
+        if right and map:get("collision", x + 1, y) then world:add("playerX", 1) end
+        if up    and map:get("collision", x, y - 1) then world:add("playerY", -1) end
+        if down  and map:get("collision", x, y + 1) then world:add("playerY", 1) end
+        
+        input.left[2] = false
+        input.right[2] = false
+        input.up[2] = false
+        input.down[2] = false
+        
         x = world:get("playerX")
         y = world:get("playerY")
         

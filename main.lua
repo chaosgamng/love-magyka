@@ -13,12 +13,20 @@ world = World{}
 player = world:get("player")
 
 console = false
-editor = false
-command = ""
+local editor = false
+local command = ""
 
 keyLShift = false
 keyRShift = false
 keyShift = false
+input = {
+    up = {"up", false, 0},
+    down = {"down", false, 0},
+    left = {"left", false, 0},
+    right = {"right", false, 0},
+}
+
+local keyTimerDefault = 0.1
 
 function love.load()
     font = love.graphics.newImageFont("image/imagefont.png",
@@ -92,9 +100,24 @@ function love.keypressed(key)
     end
 end
 
-function love.draw()
-    keyShift = keyLShift or keyRShift
+function love.update(dt)
+    for k, v in pairs(input) do
+        if love.keyboard.isScancodeDown(v[1]) then
+            v[3] = v[3] + dt
+            if v[3] > keyTimerDefault then
+                v[3] = v[3] - keyTimerDefault
+                print(k)
+                v[2] = true
+            end
+        else
+            v[2] = false
+        end
+    end
     
+    keyShift = keyLShift or keyRShift
+end
+
+function love.draw()
     screen:update(0)
     
     if console then
@@ -103,5 +126,5 @@ function love.draw()
         draw:text(command, 2, 21)
     end
     
-    love.timer.sleep(1/60)
+    love.timer.sleep(1/15)
 end
