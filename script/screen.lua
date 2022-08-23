@@ -13,9 +13,10 @@ screen = {
     branchData = {},
     branchDataDefaults = {
         map = {
-            tiles = nil,
-            collision = nil,
+            map = nil,
             portal = nil,
+            hunting = false,
+            steps = 0,
         },
         town = {
             town = nil,
@@ -204,7 +205,13 @@ screen = {
     end,
     
     map = function(self)
+        if self:get("map") == nil then
+            self:set("map", newMap(world:get("currentMap")))
+        end
+        
+        -- Drawing
         draw:initScreen((screen.height - 1) * 2)
+        local map = self:get("map")
         
         local left = draw.subLeft
 		local width = math.floor((self.width - 2 - left) / 2)
@@ -214,44 +221,74 @@ screen = {
         local x = world:get("playerX")
         local y = world:get("playerY")
         
-        map = Map{name=world:get("currentMap")}
-        map:loadData()
         map:draw(x, y, width, height, left, top)
         draw:rect("black", left + width + 1, top + math.floor(height / 2) + 1, 2, 1)
         
+        draw:top()
+        if self:get("hunting") then draw:text("Hunting: {green}True")
+        else draw:text("Hunting: {red}False") end
+        
         draw:newline()
-        draw:options({"Camp"})
+        draw:options({"Camp", "Hunt"})
         
         draw:newline()
         draw:text("- Press a letter to select an option.")
         
+        -- Input
         local left = input.left[2]
         local right = input.right[2]
         local up = input.up[2]
         local down = input.down[2]
         
+        local moveX = 0
+        local moveY = 0
+        
         if self.key == "c" then self:down("camp") end
-        if left  and map:get("collision", x - 1, y) then world:add("playerX", -1) end
-        if right and map:get("collision", x + 1, y) then world:add("playerX", 1) end
-        if up    and map:get("collision", x, y - 1) then world:add("playerY", -1) end
-        if down  and map:get("collision", x, y + 1) then world:add("playerY", 1) end
+        if self.key == "h" then self:set("hunting", not self:get("hunting")) end
+        if left  and map:get("collision", x - 1, y) then moveX = moveX - 1 end
+        if right and map:get("collision", x + 1, y) then moveX = moveX + 1 end
+        if up    and map:get("collision", x, y - 1) then moveY = moveY - 1 end
+        if down  and map:get("collision", x, y + 1) then moveY = moveY + 1 end
         
         input.left[2] = false
         input.right[2] = false
         input.up[2] = false
         input.down[2] = false
         
-        x = world:get("playerX")
-        y = world:get("playerY")
-        
-        if map.data.portalTiles[y] then
-            if map.data.portalTiles[y][x] then
-                local portal = map.data.portalTiles[y][x]
-                if portal.town then
-                    world:set("playerX", portal.x + 1)
-                    world:set("playerY", portal.y + 2)
-                    self:set("portal", portal)
-                    self:down("town")
+        -- Updating
+        if moveX ~= 0 or moveY ~= 0 then
+            world:add("playerX", moveX)
+            world:add("playerY", moveY)
+            
+            local x = world:get("playerX")
+            local y = world:get("playerY")
+            local group = map:get("group", x, y)
+            
+            if map.data.portalTiles[y] then
+                if map.data.portalTiles[y][x] then
+                    local portal = map.data.portalTiles[y][x]
+                    if portal.town then
+                        world:set("playerX", portal.x + 1)
+                        world:set("playerY", portal.y + 2)
+                        self:set("portal", portal)
+                        self:down("town")
+                    end
+                end
+            end
+            
+            if group > 0 then
+                local move = math.abs(moveX) + math.abs(moveY)
+                if self:get("hunting") then self:add("steps", move)
+                elseif rand(1, 20) == move then self:add("steps", move) end
+                
+                if self:get("steps") >= 20 then
+                    local enemies = map:encounter(group)
+                    self:set("steps", 0)
+                    
+                    if #enemies > 0 then
+                        self:down("battle")
+                        self:set("enemy", enemies)
+                    end
                 end
             end
         end
@@ -284,10 +321,13 @@ screen = {
         
         draw:initScreen(38, "screen/"..self:get("storeType", "town"))
         
-        local option, index = self:pages(store.items, function(item) if item:get("stackable") then return item:display(1) else return item:display() end end)
+        local option, index = self:pages(
+            store.items,
+            function(item) return item:display().."  <gp> "..item:get("value") end
+        )
         
         if store.sell then
-            text:newline()
+            draw:newline()
             draw:options({"Sell"})
         end
         

@@ -20,12 +20,13 @@ keyLShift = false
 keyRShift = false
 keyShift = false
 input = {
-    up = {"up", false, 0},
-    down = {"down", false, 0},
-    left = {"left", false, 0},
-    right = {"right", false, 0},
+    up = {"up", false},
+    down = {"down", false},
+    left = {"left", false},
+    right = {"right", false},
 }
 
+local keyTimer = 0
 local keyTimerDefault = 0.1
 
 function love.load()
@@ -69,7 +70,6 @@ function love.keypressed(key)
             
             if word == "battle" then
                 if args[1] then
-                    screen.turn = "player"
                     screen:down("battle")
                     screen:set("enemy", {newEntity(args[1])}, "battle")
                 end
@@ -101,16 +101,12 @@ function love.keypressed(key)
 end
 
 function love.update(dt)
-    for k, v in pairs(input) do
-        if love.keyboard.isScancodeDown(v[1]) then
-            v[3] = v[3] + dt
-            if v[3] > keyTimerDefault then
-                v[3] = v[3] - keyTimerDefault
-                print(k)
-                v[2] = true
-            end
-        else
-            v[2] = false
+    keyTimer = keyTimer + dt
+    if keyTimer >= keyTimerDefault then
+        keyTimer = keyTimer - keyTimerDefault
+        for k, v in pairs(input) do
+            if love.keyboard.isScancodeDown(v[1]) then v[2] = true
+            else v[2] = false end
         end
     end
     
@@ -118,6 +114,7 @@ function love.update(dt)
 end
 
 function love.draw()
+    collectgarbage("collect")
     screen:update(0)
     
     if console then
@@ -126,5 +123,5 @@ function love.draw()
         draw:text(command, 2, 21)
     end
     
-    love.timer.sleep(1/15)
+    love.timer.sleep(1/30)
 end

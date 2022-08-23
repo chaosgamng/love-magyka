@@ -221,17 +221,22 @@ Entity = Node{
                     line = line.."but misses."
                 end
             end
-                
+            
             local crit = 1
             if hp < 0 or mp < 0 then
-                if rand(1, 100) < source:get("stats").crit - self:get("stats").resistance then crit = crit + (source:get("stats").critDamage / 100) end
+                local variance = rand(80, 120) / 100
+                
+                if rand(1, 100) < source:get("stats").crit - self:get("stats").resistance then
+                    crit = crit + (source:get("stats").critDamage / 100)
+                end
+                
                 if hp < 0 then
-                    hp = math.floor((hp + (self:get("stats").armor / 2) + self:get("stats").vitality) * crit)
+                    hp = math.floor((hp + (self:get("stats").armor / 2) + self:get("stats").vitality) * crit * variance)
                     if hp > -1 then hp = -1 end
                 end
                 
                 if mp < 0 then
-                    mp = math.floor((mp + self:get("stats").vitality) * crit)
+                    mp = math.floor((mp + self:get("stats").vitality) * crit * variance)
                     if mp > -1 then mp = -1 end
                 end
             end
@@ -255,8 +260,8 @@ Entity = Node{
                     mp = 0
                     line = line.."doing nothing."
                 else
-                    if hp ~= 0 then hp = self:get("stats").maxHp - self:get("hp") end
-                    if mp ~= 0 then mp = self:get("stats").maxMp - self:get("mp") end
+                    if hp > 0 then hp = self:get("stats").maxHp - self:get("hp") end
+                    if mp > 0 then mp = self:get("stats").maxMp - self:get("mp") end
                     
                     if hp > 0 and mp > 0 then line = line.."healing <hp>{hp} %d {white}and <mp>{mp} %d{white}." % {math.abs(hp), math.abs(mp)}
                     elseif hp > 0 then line = line.."healing <hp>{hp} %d{white}." % {math.abs(hp)}
@@ -348,6 +353,7 @@ function newEntity(arg)
             hit = 95,
             dodge = 4,
             crit = 4,
+            critDamage = 100,
         }
         
         if entity.baseStats then
