@@ -64,6 +64,10 @@ screen = {
             option = "",
             text = "",
         },
+        crafting = {
+            page = 1,
+            station = "none",
+        },
     },
     
     key = "",
@@ -122,7 +126,7 @@ screen = {
         self.branchData[self.current][key] = self.branchData[self.current][key] + value
     end,
     
-    pages = function(self, list, printFunction)
+    pages = function(self, list, printFunction, confirmFunction, cancelFunction)
 		local start = (self:get("page") - 1) * 10 + 1
 		local stop = self:get("page") * 10
 		if stop > #list then stop = #list end
@@ -130,7 +134,7 @@ screen = {
 		local right = self:get("page") * 10 + 1 < #list
 		
 		local option = nil
-		
+        
 		if #list == 0 then
 			draw:text("{gray68}- Empty")
 		else
@@ -146,9 +150,16 @@ screen = {
 			end
 		end
 		
-		if self.key == "0" then self.key = "10" end
+        draw:newline()
+        draw:text("- Press a number or letter to select an option.")
+        draw:text("  Press [LEFT] and [RIGHT] to navigate pages. Press [ESC] to go back.")
+        
+		if self.key == "0" then self.key = "10"
+        elseif self.key == "left" and left then self:add("page", -1)
+        elseif self.key == "right" and right then self:add("page", 1) end
 		
-		if isInRange(self.key, 1, #list - start + 1) then return tonumber(self.key), tonumber(self.key) + start - 1 else return nil, nil end
+		if isInRange(self.key, 1, #list - start + 1) then confirmFunction(list[tonumber(self.key) + start - 1])
+        else cancelFunction() end
 	end,
 	
 	quantity = function(self, maximum, confirmFunction, cancelFunction)
@@ -321,28 +332,23 @@ screen = {
         
         draw:initScreen(38, "screen/"..self:get("storeType", "town"))
         
-        local option, index = self:pages(
-            store.items,
-            function(item) return item:display().."  <gp> "..item:get("value") end
-        )
-        
         if store.sell then
             draw:newline()
             draw:options({"Sell"})
         end
         
-        draw:newline()
-        draw:text("- Press a number or letter to select an option.")
-        draw:text("  Press [LEFT] and [RIGHT] to navigate pages. Press [ESC] to go back.")
+        local option, index = self:pages(
+            store.items,
+            function(item) return item:display().."  <gp> "..item:get("value") end
+            function(item)
+                self.item = item
+                self:down("inspectItemStore")
+            end,
+            function() self:up() end
+        )
         
-        if option then
-            self.item = store.items[index]
-            self:down("inspectItemStore")
-        elseif self.key == "left" and left then self:add("page", -1)
-        elseif self.key == "right" and right then self:add("page", 1)
-        elseif self.key == "s" and store.sell then
+        if self.key == "s" and store.sell then
             self:down("inventorySell")
-        elseif self.key == "escape" then self:up() end
     end,
     
     camp = function(self)
@@ -365,17 +371,18 @@ screen = {
     inventory = function(self)
         draw:initScreen(38, "screen/inventory")
 
-		local option, index = self:pages(player:get("inventory"), function(item) if item[1]:get("stackable") then return item[1]:display(item[2]) else return item[1]:display() end end)
-        
-        draw:newline()
-        draw:text("- Press a number to select an option. Press ESC to go back.")
-		
-        if option then
-            self.item = player:get("inventory")[index][1]
-            self:down("inspectItem")
-        elseif self.key == "left" and left then self:add("page", -1)
-        elseif self.key == "right" and right then self:add("page", 1)
-        elseif self.key == "escape" then self:up() end
+		local option, index = self:pages(
+            player:get("inventory"),
+            function(item)
+                if item[1]:get("stackable") then return item[1]:display(item[2])
+                else return item[1]:display() end
+            end,
+            function(item)
+                self.item = item
+                self:down("inspectItem")
+            end,
+            function() self:up() end
+        )
     end,
     
     inventorySell = function(self)
@@ -844,11 +851,22 @@ screen = {
     crafting = function(self)
         draw:initScreen(38, "screen/crafting")
         
-        draw:text("Please purchase the crafting DLC for $99.99!")
+        local option, index = self:pages(
+            player:get("recipes"),
+            function(recipe)
+                item = recipe:get("item")
+                if item:get("stackable") then return item:display(recipe:get("quantity"))
+                else return item:display() end
+            end,
+            function(recipe)
+                self:down("craftItem")
+                self:set("recipe", recipe, "craftItem")
+            end,
+            function() self:up() end
+        )
+    end,
+    
+    craftItem = function(self)
         
-        draw:newline()
-        draw:text("- Press ESC to go back.")
-        
-        if self.key == "escape" then self:up() end
     end,
 }

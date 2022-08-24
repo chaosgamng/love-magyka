@@ -2,6 +2,7 @@ require "script/globals"
 require "script/node/effect"
 require "script/node/item"
 require "script/node/node"
+require "script/node/recipe"
 require "script/tools"
 
 Entity = Node{
@@ -23,6 +24,8 @@ Entity = Node{
     
     equipment = {},
     inventory = {},
+    
+    recipes = {},
     
     levelUp = function(self)
         self:add("level", 1)
@@ -63,6 +66,7 @@ Entity = Node{
             item = deepcopy(item)
             item:update()
             
+            -- Add item
             if self:numOfItem(item) > 0 and item:get("stackable") then
                 for k, v in ipairs(self.inventory) do
                     if v[1] == item then
@@ -73,7 +77,22 @@ Entity = Node{
             elseif item:get("stackable") then
                 table.insert(self.inventory, {item, quantity})
             else
-                for i = 1, quantity do print("h"); table.insert(self.inventory, {deepcopy(item), 1}) end
+                for i = 1, quantity do table.insert(self.inventory, {deepcopy(item), 1}) end
+            end
+            
+            -- Add recipes
+            if recipes[item.name] then
+                for k, v in ipairs(recipes[item.name]) do
+                    local recipeFound = false
+                    for _, recipe in ipairs(self.recipes) do
+                        if recipe:get("name") == v then
+                            recipeFound = true
+                            break
+                        end
+                    end
+                    
+                    if not recipeFound then table.insert(self.recipes, newRecipe(v)) end
+                end
             end
         end
     end,
@@ -342,6 +361,12 @@ function newEntity(arg)
         else
             entity.equipment = {}
             for k, v in ipairs(equipment) do entity.equipment[v] = "" end
+        end
+        
+        if entity.recipes then
+            for k, v in ipairs(entity.recipe) do
+                entity.recipe[k] = newRecipe[v]
+            end
         end
         
         if entity.attackEffect then entity.attackEffect = newEffect(entity.attackEffect)

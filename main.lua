@@ -73,10 +73,14 @@ function love.keypressed(key)
                     screen:down("battle")
                     screen:set("enemy", {newEntity(args[1])}, "battle")
                 end
+            
+            
             elseif word == "equip" then
                 if args[1] then
                     player:equip(newItem(args[1]))
                 end
+            
+            
             elseif word == "give" then
                 if args[1] then
                     local quantity = 1
@@ -84,9 +88,17 @@ function love.keypressed(key)
                     
                     player:addItem(newItem(args[1]), quantity)
                 end
+            
+            
             elseif word == "heal" then
                 player:set("hp", 999999999)
                 player:set("mp", 999999999)
+            
+            
+            elseif word == "pp" then
+                print(dumpTable(player:get(args[1])))
+            
+            
             elseif word == "editor" then
                 for k, v in pairs(require("script/editor")) do screen[k] = v end
                 screen.current = "editorMain"
