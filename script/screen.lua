@@ -30,10 +30,11 @@ screen = {
             page = 1,
         },
         inventorySell = {
-        
+            page = 1,
         },
 		battleItem = {
 			page = 1,
+            item = nil,
 		},
         battle = {
             turn = 1,
@@ -46,32 +47,43 @@ screen = {
             targetType = "",
 			target = "",
         },
+        victory = {
+            stage = "input",
+            lootEntity = newEntity{},
+        },
         inspectItem = {
             stage = "input",
             quantity = 1,
+            item = nil,
             text = "",
         },
         inspectItemSell = {
             stage = "input",
             quantity = 1,
+            item = nil,
         },
         inspectItemStore = {
             stage = "input",
             quantity = 0,
+            item = nil,
         },
         inspectItemEquipped = {
             stage = "input",
-            option = "",
+            item = nil,
             text = "",
         },
         crafting = {
             page = 1,
             station = "none",
         },
+        craftItem = {
+            stage = "input",
+            recipe = nil,
+            quantity = 0,
+        },
     },
     
     key = "",
-    item = nil,
     
     update = function(self, dt)
         self[self.current](self)
@@ -156,19 +168,21 @@ screen = {
         
 		if self.key == "0" then self.key = "10"
         elseif self.key == "left" and left then self:add("page", -1)
-        elseif self.key == "right" and right then self:add("page", 1) end
+        elseif self.key == "right" and right then self:add("page", 1)
+        elseif self.key == "escape" then cancelFunction() end
 		
-		if isInRange(self.key, 1, #list - start + 1) then confirmFunction(list[tonumber(self.key) + start - 1])
-        else cancelFunction() end
+		if isInRange(self.key, 1, #list - start + 1) then
+            confirmFunction(list[tonumber(self.key) + start - 1])
+        end
 	end,
 	
 	quantity = function(self, maximum, confirmFunction, cancelFunction)
         draw:newline()
-        draw:text("- Press [LEFT] to select minimum. Press [RIGHT] to select maximum.")
-        draw:text("  Press [UP] and [DOWN] to change quantity. Press [ENTER] to confirm.")
+        draw:text("Currently seleced: {xp}%d{white} (Max: %d)." % {self:get("quantity"), maximum})
         
         draw:newline()
-        draw:text("Currently seleced: {gp}%d{white} (Max: %d)." % {self:get("quantity"), maximum})
+        draw:text("- Press [LEFT] to select minimum. Press [RIGHT] to select maximum.")
+        draw:text("  Press [UP] and [DOWN] to change quantity. Press [ENTER] to confirm.")
         
         if self.key == "left" and maximum ~= 0 then self:set("quantity", 1)
         elseif self.key == "right" and maximum ~= 0 then self:set("quantity", maximum)
@@ -236,6 +250,9 @@ screen = {
         draw:rect("black", left + width + 1, top + math.floor(height / 2) + 1, 2, 1)
         
         draw:top()
+        draw:mainStats(player, 20)
+        
+        draw:newline()
         if self:get("hunting") then draw:text("Hunting: {green}True")
         else draw:text("Hunting: {red}False") end
         
@@ -256,15 +273,22 @@ screen = {
         
         if self.key == "c" then self:down("camp") end
         if self.key == "h" then self:set("hunting", not self:get("hunting")) end
-        if left  and map:get("collision", x - 1, y) then moveX = moveX - 1 end
-        if right and map:get("collision", x + 1, y) then moveX = moveX + 1 end
-        if up    and map:get("collision", x, y - 1) then moveY = moveY - 1 end
-        if down  and map:get("collision", x, y + 1) then moveY = moveY + 1 end
+        if left  then moveX = moveX - 1 end
+        if right then moveX = moveX + 1 end
+        if up    then moveY = moveY - 1 end
+        if down  then moveY = moveY + 1 end
         
         input.left[2] = false
         input.right[2] = false
         input.up[2] = false
         input.down[2] = false
+        
+        if not map:get("collision", x + moveX, y) then moveX = 0 end
+        if not map:get("collision", x, y + moveY) then moveY = 0 end
+        if not map:get("collision", x + moveX, y + moveY) then
+            moveX = 0
+            moveY = 0
+        end
         
         -- Updating
         if moveX ~= 0 or moveY ~= 0 then
@@ -337,18 +361,17 @@ screen = {
             draw:options({"Sell"})
         end
         
-        local option, index = self:pages(
+        self:pages(
             store.items,
-            function(item) return item:display().."  <gp> "..item:get("value") end
+            function(item) return item:display().."  <gp> "..item:get("value") end,
             function(item)
-                self.item = item
                 self:down("inspectItemStore")
+                self:set("item", item, "inspectItemStore")
             end,
             function() self:up() end
         )
         
-        if self.key == "s" and store.sell then
-            self:down("inventorySell")
+        if self.key == "s" and store.sell then self:down("inventorySell") end
     end,
     
     camp = function(self)
@@ -371,15 +394,15 @@ screen = {
     inventory = function(self)
         draw:initScreen(38, "screen/inventory")
 
-		local option, index = self:pages(
+		self:pages(
             player:get("inventory"),
             function(item)
                 if item[1]:get("stackable") then return item[1]:display(item[2])
                 else return item[1]:display() end
             end,
             function(item)
-                self.item = item
                 self:down("inspectItem")
+                self:set("item", item[1], "inspectItem")
             end,
             function() self:up() end
         )
@@ -388,17 +411,18 @@ screen = {
     inventorySell = function(self)
         draw:initScreen(38, "screen/inventory")
 
-		local option, index = self:pages(player:get("inventory"), function(item) if item[1]:get("stackable") then return item[1]:display(item[2]) else return item[1]:display() end end)
-        
-        draw:newline()
-        draw:text("- Press a number to select an option. Press ESC to go back.")
-		
-        if option then
-            self.item = player:get("inventory")[index][1]
-            self:down("inspectItemSell")
-        elseif self.key == "left" and left then self:add("page", -1)
-        elseif self.key == "right" and right then self:add("page", 1)
-        elseif self.key == "escape" then self:up() end
+		self:pages(
+            player:get("inventory"),
+            function(item) 
+                if item[1]:get("stackable") then return item[1]:display(item[2])
+                else return item[1]:display() end
+            end,
+            function(item)
+                self:down("inspectItemSell")
+                self:set("item", item, "inspectItemSel")
+            end,
+            function() self:up() end
+        )
     end,
     
     equipment = function(self)
@@ -420,8 +444,8 @@ screen = {
             local item = playerEquipment[equipment[tonumber(self.key)]]
             
             if item ~= "" then
-                self.item = item
                 self:down("inspectItemEquipped")
+                self:set("item", item, "inspectItemEquipped")
             end
         elseif self.key == "escape" then self:up() end
     end,
@@ -547,6 +571,8 @@ screen = {
             
             -- Choose target
             elseif self:get("stage") == "target" then
+                local autoSelect = self:get("targetType") == "enemy" and #self:get("enemy") == 1
+                
                 if self:get("targetType") ~= "enemy" then
                     draw:options({"Self"})
                     draw:newline()
@@ -557,8 +583,10 @@ screen = {
                 
                 for k, v in ipairs(self:get("enemy")) do
                     if v:get("hp") > 0 then
-                        draw:rect(color.gray28, 5, draw.row, 3, 1)
-                        draw:text(" (%d) %s" % {index, v:get("name")})
+                        if not autoSelect then
+                            draw:rect(color.gray28, 5, draw.row, 3, 1)
+                            draw:text(" (%d) %s" % {index, v:get("name")})
+                        end
                         index = index + 1
                         table.insert(targets, v)
                     end
@@ -569,8 +597,11 @@ screen = {
                 if self.key == "s" and self:get("targetType") ~= "enemy" then
                     self:set("target", player)
                     targetChosen = true
-                elseif isInRange(self.key, 1, index) then
-                    local enemy = targets[tonumber(self.key)]
+                elseif isInRange(self.key, 1, index) or autoSelect then
+                    local index = tonumber(self.key)
+                    if autoSelect then index = 1 end
+                    
+                    local enemy = targets[index]
                     if enemy:get("hp") > 0 then
                         self:set("target", enemy)
                         targetChosen = true
@@ -579,7 +610,7 @@ screen = {
                 
                 if targetChosen then
                     if self:get("itemChosen") then
-                        appendTable(self:get("text"), self.item:use(player, self:get("target")))
+                        appendTable(self:get("text"), self:get("item"):use(player, self:get("target")))
                         self:set("itemChosen", false)
                     elseif self:get("artChosen") then
                         -- do stuff lmao
@@ -618,12 +649,18 @@ screen = {
 			if v[1]:get("consumable") then table.insert(itemList, v) end
 		end
 		
-		local option, index = self:pages(itemList, function(item) if item[1]:get("stackable") then return item[1]:display(item[2]) else return item[1]:display() end end)
-		
-		if option then
-			self.item = itemList[index][1]
-			self:down("inspectItemBattle")
-		elseif self.key == "escape" then self:up() end
+		self:pages(
+            itemList,
+            function(item)
+                if item[1]:get("stackable") then return item[1]:display(item[2])
+                else return item[1]:display() end
+            end,
+            function(item)
+                self:down("inspectItemBattle")
+                self:set("item", item, "inspectItemBattle")
+            end,
+            function() self:up() end
+        )
     end,
     
     victory = function(self)
@@ -635,7 +672,48 @@ screen = {
         draw:newline()
         draw:text("You won! Good job.")
         
-        if self.key == "return" then self:upPast("battle") end
+        local lootEntity = self:get("lootEntity")
+        
+        if self:get("stage") == "input" then
+            for k, v in ipairs(self:get("enemy", "battle")) do
+                for _, loot in ipairs(v:get("inventory")) do
+                    lootEntity.gp = lootEntity.gp + rand(loot.gp)
+                    lootEntity.xp = lootEntity.xp + rand(loot.xp)
+                    
+                    for __, item in ipairs(loot:drop()) do
+                        lootEntity:addItem(item[1], item[2])
+                    end
+                end
+            end
+            
+            if lootEntity.gp then player:add("gp", lootEntity.gp) end
+            if lootEntity.xp then player:add("xp", lootEntity.xp) end
+            for k, v in ipairs(lootEntity:get("inventory")) do
+                player:addItem(v[1], v[2])
+            end
+            self:set("stage", "output")
+        
+        
+        elseif self:get("stage") == "output" then
+            draw:newline()
+            draw:text("Obtained:")
+            draw:text(" GP: <gp> "..lootEntity.gp)
+            draw:text(" XP: <xp> "..lootEntity.xp)
+            
+            if #lootEntity:get("inventory") > 0 then
+                draw:newline()
+                draw:text(" Items:")
+                for k, v in ipairs(lootEntity:get("inventory")) do
+                    local item = ""
+                    if v[1]:get("stackable") then item = v[1]:display(v[2])
+                    else item = v[1]:display() end
+                    
+                    draw:text(" - "..item)
+                end
+            end
+            
+            if self.key == "return" then self:upPast("battle") end
+        end
     end,
     
     defeat = function(self)
@@ -652,34 +730,35 @@ screen = {
     
     inspectItem = function(self)
         draw:initScreen(38, "screen/inspectItem")
-        draw:imageSide("item/"..self.item:get("name"), "item/default")
+        local item = self:get("item")
+        draw:imageSide("item/"..item:get("name"), "item/default")
         
         draw:top()
         local quantity = 0
-        if self.item:get("stackable") then quantity = player:numOfItem(self.item) end
-        draw:item(self.item, quantity)
+        if item:get("stackable") then quantity = player:numOfItem(item) end
+        draw:item(item, quantity)
         
         if self:get("stage") == "input" then
             draw:newline()
-            if self.item:get("consumable") then draw:options({"Use", "Discard"})
-            elseif self.item:get("equipment") then draw:options({"Equip", "Discard"})
+            if item:get("consumable") then draw:options({"Use", "Discard"})
+            elseif item:get("equipment") then draw:options({"Equip", "Discard"})
             else draw:options({"Discard"}) end
             
             draw:newline()
             draw:text("- Press a key to select an option.")
             
-            if self.key == "e" and self.item:get("equipment") then
-                player:equip(self.item)
+            if self.key == "e" and item:get("equipment") then
+                player:equip(item)
                 self:set("stage", "equip")
-            elseif self.key == "u" and self.item:get("consumable") then
-                self:set("text", self.item:use(player))
-                if not self.item:get("infinite") then player:removeItem(self.item) end
+            elseif self.key == "u" and item:get("consumable") then
+                self:set("text", item:get("effect"):use(player))
+                if not item:get("infinite") then player:removeItem(item) end
                 self:set("stage", "use")
             elseif self.key == "d" then
-                if self.item:get("stackable") then
+                if item:get("stackable") then
                     self:set("stage", "discard")
                 else
-                    player:removeItem(self.item)
+                    player:removeItem(item)
                     self:set("quantity", 0)
                     self:set("stage", "discard output")
                 end
@@ -688,7 +767,7 @@ screen = {
         
         elseif self:get("stage") == "equip" then
             draw:newline()
-            draw:text("Equipped "..self.item:display()..".")
+            draw:text("Equipped "..item:display()..".")
             draw:newline()
             draw:text("- Press [ENTER] to continue.")
             
@@ -706,38 +785,40 @@ screen = {
         
         
         elseif self:get("stage") == "discard" then
-            self:quantity(player:numOfItem(self.item), function() self:set("stage", "discard output") end, function() self:set("stage", "input") end)
+            self:quantity(player:numOfItem(item), function() self:set("stage", "discard output") end, function() self:set("stage", "input") end)
         
         
         elseif self:get("stage") == "discard output" then
             local discardText = ""
-            if quantity == 1 and not self.item:get("stackable") then discardText = self.item:display()
-            else discardText = self.item:display(self:get("quantity")) end
+            if quantity == 1 and not item:get("stackable") then discardText = item:display()
+            else discardText = item:display(self:get("quantity")) end
             
             draw:newline()
             draw:text("Discarded %s." % {discardText})
             draw:newline()
             draw:text("- Press [ENTER] to continue.")
             
-            if self.key == "escape" or self.key == "return" then self:set("stage", "output") end
+            if self.key == "escape" or self.key == "return" then
+                player:removeItem(item, self:get("quantity"))
+                self:set("stage", "output")
+            end
         
         
         elseif self:get("stage") == "output" then
-            player:removeItem(self.item, self:get("quantity"))
-            
-            if player:numOfItem(self.item) == 0 or not self.item:get("stackable") then self:up()
+            if player:numOfItem(item) == 0 or not item:get("stackable") then self:up()
             else self:set("stage", "input") end
         end
     end,
     
     inspectItemSell = function(self)
         draw:initScreen(38, "screen/inspectItem")
-        draw:imageSide("item/"..self.item:get("name"), "item/default")
+        local item = self:get("item")
+        draw:imageSide("item/"..item:get("name"), "item/default")
         
         draw:top()
         local quantity = 0
-        if self.item:get("stackable") then quantity = player:numOfItem(self.item) end
-        draw:item(self.item, quantity)
+        if item:get("stackable") then quantity = player:numOfItem(item) end
+        draw:item(item, quantity)
         
         if self:get("stage") == "input" then
             draw:newline()
@@ -746,10 +827,10 @@ screen = {
             draw:text("- Press a key to select an option. Press [ESC] to go back.")
             
             if self.key == "s" then
-                if self.item:get("stackable") then
+                if item:get("stackable") then
                     self:set("stage", "sell")
                 else
-                    player:removeItem(self.item)
+                    player:removeItem(item)
                     self:set("quantity", 0)
                     self:set("stage", "sell output")
                 end
@@ -757,15 +838,15 @@ screen = {
         
         
         elseif self:get("stage") == "sell" then
-            self:quantity(player:numOfItem(self.item), function() self:set("stage", "sell output") end, function() self:set("stage", "input") end)
+            self:quantity(player:numOfItem(item), function() self:set("stage", "sell output") end, function() self:set("stage", "input") end)
         
         
         elseif self:get("stage") == "sell output" then
             local sellText = ""
-            if quantity == 1 and not self.item:get("stackable") then sellText = self.item:display()
-            else sellText = self.item:display(self:get("quantity")) end
+            if quantity == 1 and not item:get("stackable") then sellText = item:display()
+            else sellText = item:display(self:get("quantity")) end
             
-            local sellValue = math.ceil(self.item:get("value") * quantity * 0.67)
+            local sellValue = math.ceil(item:get("value") * quantity * 0.67)
             sellText = sellText.." for <gp>{gp}%d{white}." % {sellValue}
             
             draw:newline()
@@ -774,10 +855,10 @@ screen = {
             draw:text("- Press [ENTER] to continue.")
             
             if self.key == "escape" or self.key == "return" then
-                player:removeItem(self.item, self:get("quantity"))
+                player:removeItem(item, self:get("quantity"))
                 player:add("gp", sellValue)
                 
-                if player:numOfItem(self.item) == 0 or not self.item:get("stackable") then self:up()
+                if player:numOfItem(item) == 0 or not item:get("stackable") then self:up()
                 else self:set("stage", "input") end
             end
         end
@@ -785,20 +866,21 @@ screen = {
     
     inspectItemStore = function(self)
         draw:initScreen(38, "screen/inspectItem")
-        draw:imageSide("item/"..self.item:get("name"), "item/default")
+        local item = self:get("item")
+        draw:imageSide("item/"..item:get("name"), "item/default")
         
         draw:top()
-        draw:item(self.item)
+        draw:item(item)
         
         if self:get("stage") == "input" then
-            local maxBuy = math.floor(player:get("gp") / self.item:get("value"))
+            local maxBuy = math.floor(player:get("gp") / item:get("value"))
             self:quantity(maxBuy, function() self:set("stage", "output") end, function() self:up() end)
         
         
         elseif self:get("stage") == "output" then
             local buyText = ""
-            if quantity == 1 and not self.item:get("stackable") then buyText = self.item:display()
-            else buyText = self.item:display(self:get("quantity")) end
+            if quantity == 1 and not item:get("stackable") then buyText = item:display()
+            else buyText = item:display(self:get("quantity")) end
             
             draw:newline()
             draw:text("Bought %s." % {buyText})
@@ -806,8 +888,8 @@ screen = {
             draw:text("- Press [ENTER] to continue.")
             
             if self.key == "escape" or self.key == "return" then
-                player:addItem(newItem(self.item), self:get("quantity"))
-                player:add("gp", -self:get("quantity") * self.item:get("value"))
+                player:addItem(newItem(item), self:get("quantity"))
+                player:add("gp", -self:get("quantity") * item:get("value"))
                 self:up()
             end
         end
@@ -815,32 +897,35 @@ screen = {
     
     inspectItemEquipped = function(self)
         draw:initScreen(38, "screen/inspectItem")
-        draw:imageSide("item/"..self.item:get("name"), "item/default")
+        local item = self:get("item")
+        draw:imageSide("item/"..item:get("name"), "item/default")
         
         draw:top()
-        draw:item(self.item)
+        draw:item(item)
         
         draw:newline()
         draw:options({"Unequip"})
         
         if self.key == "u" then
-            player:unequip(self.item)
+            player:unequip(item)
             self:up()
         elseif self.key == "escape" then self:up() end
     end,
     
 	inspectItemBattle = function(self)
 		draw:initScreen(38, "screen/inspectItem")
-        draw:imageSide("item/"..self.item:get("name"), "item/default")
+        local item = self:get("item")
+        draw:imageSide("item/"..item:get("name"), "item/default")
         
         draw:top()
-        draw:item(self.item)
+        draw:item(item)
 		
         draw:newline()
         draw:options({"Use"})
         
-        if self.key == "u" and self.item:get("consumable") then
+        if self.key == "u" and item:get("consumable") then
             self:set("itemChosen", true, "battle")
+            self:set("item", item, "battle")
             self:upPast("battleItem")
         elseif self.key == "escape" then
             self:set("itemChosen", false, "battle")
@@ -849,12 +934,12 @@ screen = {
 	end,
 	
     crafting = function(self)
-        draw:initScreen(38, "screen/crafting")
+        draw:initScreen(38, "screen/craftItem")
         
-        local option, index = self:pages(
+        self:pages(
             player:get("recipes"),
             function(recipe)
-                item = recipe:get("item")
+                local item = recipe:get("item")
                 if item:get("stackable") then return item:display(recipe:get("quantity"))
                 else return item:display() end
             end,
@@ -867,6 +952,50 @@ screen = {
     end,
     
     craftItem = function(self)
+        draw:initScreen(38, "screen/craftItem")
+        local recipe = self:get("recipe")
+        local item = recipe:get("item")
+        draw:imageSide("item/"..item:get("name"), "item/default")
         
+        draw:item(item)
+        
+        local craftable = true
+        local numCraftable = 99999999
+        for k, v in pairs(recipe:get("ingredients")) do
+            local owned = player:numOfItem(k)
+            
+            if owned < v then
+                craftable = false
+                numCraftable = 0
+            elseif math.floor(owned / v) < numCraftable then
+                numCraftable = math.floor(owned / v)
+            end
+            
+            draw:text("%dx %s (%d/%d)" % {v, newItem(k):display(), owned, v})
+        end
+        
+        if item:get("equipment") and craftable then numCraftable = 1 end
+        
+        if self:get("stage") == "input" then
+            self:quantity(
+                numCraftable,
+                function() self:set("stage", "output") end,
+                function() up() end
+            )
+        
+        
+        elseif self:get("stage") == "output" then
+            draw:newline()
+            draw:text("Crafted %s." % item:display())
+            
+            if self.key == "escape" or self.key == "return" then
+                for k, v in pairs(recipe:get("ingredients")) do
+                    player:removeItem(k, v * self:get("quantity"))
+                end
+                player:addItem(newItem(item), self:get("quantity"))
+                
+                self:up()
+            end
+        end
     end,
 }

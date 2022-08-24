@@ -1,4 +1,5 @@
 require "script/color"
+require "script/dev"
 require "script/draw"
 require "script/globals"
 require "script/node/entity"
@@ -8,6 +9,53 @@ require "script/screen"
 require "script/tools"
 
 require "library/Tserial"
+
+-- TODO
+
+--[[
+ 
+ - MINIMUM VIABLE BUILD -
+ 
+ * Arts and Items shouldn't have a use function. Effects should fill both categories.
+ * Saving / Loading (Loading is basically in place).
+ * Clear up inconsistent input hints.
+ * Add headers or some sort of description for every page.
+ * Add art for every page.
+ * Add submap teleportation and map entities.
+ * Give dev toggles and add more dev commands for easier playtesting.
+ * Continue moving screen code blocks into functions.
+ * Clean up draw.lua.
+ * Crafting of specific types in blacksmith etc.
+ * Death state.
+ * Curing and blessing from the church.
+ * Quests.
+ * Generic end boss for the demo.
+ * Add documentation and comments to the code.
+ * Passives and buffs
+ 
+ - EXTRA -
+ 
+ * Elemental attacks and resistances.
+ * Ability to choose an item from the inventory to use in:
+   - Item and Art application.
+   - Selection for what equipment to use in recipes.
+ * Procedurally generated loot.
+ * Enchanting at the arcanist.
+ * Finish the editor for items, enemies, etc.
+ * Fix diagonal collision cases.
+ * Figure out how to have columns in the screen.pages function.
+ * Random events on map screen.
+ * Map painter.
+   - Palettes
+   - Pencil, Fill, Line
+   - Undo and Redo
+   - Exporting
+   - Map modes
+   - Entity placement
+   - Entity customization
+
+]]--
+
 
 world = World{}
 player = world:get("player")
@@ -37,11 +85,6 @@ function love.load()
     love.graphics.setFont(font)
     love.graphics.setBackgroundColor(color.gray18)
     math.randomseed(os.time())
-    
-    player:addItem(newItem("Throwing Knife"), 100)
-    player:addItem(newItem("Health Potion"), 100)
-    
-    player:equip(newItem("Chestplate"))
 end
 
 function love.keyreleased(key)
@@ -56,7 +99,7 @@ function love.keypressed(key)
     if not console then screen.key = key end
     
     if console then
-        if ("abcdefghijklmnopqrstuvwyz1234567890,"):find(key) then
+        if ("abcdefghijklmnopqrstuvwxyz1234567890,"):find(key) then
             if keyShift then command = command..key:upper()
             else command = command..key end
         elseif key == "space" then command = command.." "
@@ -64,48 +107,7 @@ function love.keypressed(key)
             if #command > 1 then command = command:sub(1, #command - 1)
             elseif #command == 1 then command = "" end
         elseif key == "return" then
-            command = split(command, " ", 1)
-            local word = command[1]
-            local args = split(command[2], ", ")
-            
-            if word == "battle" then
-                if args[1] then
-                    screen:down("battle")
-                    screen:set("enemy", {newEntity(args[1])}, "battle")
-                end
-            
-            
-            elseif word == "equip" then
-                if args[1] then
-                    player:equip(newItem(args[1]))
-                end
-            
-            
-            elseif word == "give" then
-                if args[1] then
-                    local quantity = 1
-                    if #args > 1 then quantity = tonumber(args[2]) end
-                    
-                    player:addItem(newItem(args[1]), quantity)
-                end
-            
-            
-            elseif word == "heal" then
-                player:set("hp", 999999999)
-                player:set("mp", 999999999)
-            
-            
-            elseif word == "pp" then
-                print(dumpTable(player:get(args[1])))
-            
-            
-            elseif word == "editor" then
-                for k, v in pairs(require("script/editor")) do screen[k] = v end
-                screen.current = "editorMain"
-                screen.branch = {}
-                screen.bracnData = {}
-            end
-            
+            devCommand(command)
             command = ""
             console = false
         end

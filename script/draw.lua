@@ -219,13 +219,13 @@ draw = {
         self:bar(entity:get("mp"), entity:get("stats").maxMp, color.mp, color.gray48, 20, "MP: ", "%", x + 2)
     end,
     
-    mainStats = function(self, entity, x, y)
-        local x = x or 4
-        if y then self.row = y end
+    mainStats = function(self, entity, w)
+        local x = 4
+        local w = w or 4
         
-        self:hpmp(entity)
+        self:hpmp(entity, w)
         self:icon("icon/xp", x, self.row)
-        self:bar(entity:get("xp"), entity:get("maxXp"), color.xp, color.gray48, 40, "XP: ", "#", x + 2)
+        self:bar(entity:get("xp"), entity:get("maxXp"), color.xp, color.gray48, w, "XP: ", "#", x + 2)
         self:icon("icon/gp", x, self.row)
         self:text("Gold: %d" % {entity:get("gp")}, x + 2)
     end,

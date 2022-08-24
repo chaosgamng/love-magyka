@@ -1,6 +1,7 @@
 require "script/globals"
 require "script/node/effect"
 require "script/node/item"
+require "script/node/loot"
 require "script/node/node"
 require "script/node/recipe"
 require "script/tools"
@@ -24,6 +25,8 @@ Entity = Node{
     
     equipment = {},
     inventory = {},
+    
+    arts = {},
     
     recipes = {},
     
@@ -100,18 +103,26 @@ Entity = Node{
     removeItem = function(self, item, quantity)
         local quantity = quantity or 1
         
+        local name = item
+        if type(item) == "table" then name = item:get("name") end
+        
         if quantity > self:numOfItem(item) then quantity = self:numOfItem(item) end
         
         if self:numOfItem(item) > 0 then
-            for k, v in ipairs(self.inventory) do
-                if v[1] == item then
-                    if v[1]:get("stackable") then
+            if type(item) == "string" or item:get("stackable") then
+                for k, v in ipairs(self.inventory) do
+                    if v[1]:get("name") == name then
                         if quantity == v[2] then table.remove(self.inventory, k)
                         else v[2] = v[2] - quantity end
-                    else
-                        table.remove(self.inventory, k)
+                        break
                     end
-                    break
+                end
+            else
+                for k, v in ipairs(self.inventory) do
+                    if v[1] == item then
+                        table.remove(self.inventory, k)
+                        break
+                    end
                 end
             end
         end
@@ -189,19 +200,10 @@ Entity = Node{
     
     attack = function(self, target)
         local weapon = self.equipment["weapon"]
-        local effect = {}
-        local text = ""
+        local text = {}
         
-        if self:isEquipped("weapon") then
-            effect = weapon:get("effect")
-            local verb = weapon:get("verb")
-            if verb == "" then verb = self:get("attackText") end
-            
-            text = "%s %s %s, " % {self:get("name"), verb, target:get("name")}
-        else
-            effect = {newEffect(self:get("attackEffect"))}
-            text = "%s %s %s, " % {self:get("name"), self:get("attackText"), target:get("name")}
-        end
+        if self:isEquipped("weapon") then effect = self:get("equipment").weapon:get("effect")
+        else effect = {newEffect(self:get("attackEffect"))} end
         
         for k, e in ipairs(effect) do
             if e.hp then
@@ -210,9 +212,11 @@ Entity = Node{
             end
             
             if e.crit == nil then e.crit = e.critBonus + self:get("stats").crit end
+            
+            table.insert(text, e:use(self, target))
         end
         
-        return target:defend(self, effect, text)
+        return text
     end,
     
     defend = function(self, source, effect, text)
@@ -325,8 +329,8 @@ Entity = Node{
         elseif key == "xp" then
             self.xp = value
             
-            while self.xp >= self.max_xp do
-                self.xp = self.xp - self.max_xp
+            while self.xp >= self.maxXp do
+                self.xp = self.xp - self.maxXp
                 self:levelUp()
             end
         else
@@ -352,6 +356,16 @@ function newEntity(arg)
             for k, v in ipairs(entity.inventory) do
                 v[1] = newItem(v[1])
             end
+        else
+            entity.inventory = {}
+        end
+                
+        if entity.drops then
+            if entity.drops.drops ~= nil then entity.drops = {entity.drops} end
+            
+            for k, v in pairs(entity.drops) do
+                table.insert(entity.inventory, newLoot(v))
+            end
         end
         
         if entity.equipment then
@@ -365,7 +379,13 @@ function newEntity(arg)
         
         if entity.recipes then
             for k, v in ipairs(entity.recipe) do
-                entity.recipe[k] = newRecipe[v]
+                entity.recipe[k] = newRecipe(v)
+            end
+        end
+        
+        if entity.arts then
+            for k, v in ipairs(entity.arts) do
+                entity.art[k] = newEffect(v)
             end
         end
         
