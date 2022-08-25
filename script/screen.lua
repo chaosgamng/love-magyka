@@ -32,17 +32,26 @@ screen = {
         inventorySell = {
             page = 1,
         },
+        arts = {
+            page = 1,
+        },
 		battleItem = {
 			page = 1,
             item = nil,
 		},
+        battleArt = {
+            page = 1,
+            art = nil
+        },
         battle = {
             turn = 1,
             turnOrder = {},
             stage = "prebattle",
             enemy = {},
             text = {},
+            art = nil,
             artChosen = false,
+            item = nil,
 			itemChosen = false,
             targetType = "",
 			target = "",
@@ -55,7 +64,10 @@ screen = {
             stage = "input",
             quantity = 1,
             item = nil,
-            text = "",
+            text = {},
+        },
+        inspectItemBattle = {
+            item = nil,
         },
         inspectItemSell = {
             stage = "input",
@@ -71,6 +83,14 @@ screen = {
             stage = "input",
             item = nil,
             text = "",
+        },
+        inspectArt = {
+            stage = "input",
+            art = nil,
+            text = {},
+        },
+        inspectArtBattle = {
+            art = nil,
         },
         crafting = {
             page = 1,
@@ -387,6 +407,7 @@ screen = {
         
         if self.key == "i" then self:down("inventory")
         elseif self.key == "e" then self:down("equipment")
+        elseif self.key == "a" then self:down("arts")
         elseif self.key == "c" then self:down("crafting")
         elseif self.key == "escape" then self:up() end
     end,
@@ -448,6 +469,22 @@ screen = {
                 self:set("item", item, "inspectItemEquipped")
             end
         elseif self.key == "escape" then self:up() end
+    end,
+    
+    arts = function(self)
+        draw:initScreen(38, "screen/arts")
+        
+        self:pages(
+            player:get("arts"),
+            function(art)
+                return art:display()
+            end,
+            function(art)
+                self:down("inspectArt")
+                self:set("art", art, "inspectArt")
+            end,
+            function() self:up() end
+        )
     end,
     
     
@@ -558,6 +595,9 @@ screen = {
                 if self:get("itemChosen") then
                     self:set("targetType", "all")
                     self:set("stage", "target")
+                elseif self:get("artChosen") then
+                    self:set("targetType", "all")
+                    self:set("stage", "target")
                 end
                 
                 draw:options({"Fight", "Art", "Guard", "Item", "Escape"})
@@ -565,6 +605,8 @@ screen = {
                 if self.key == "f" then
                     self:set("targetType", "enemy")
                     self:set("stage", "target")
+                elseif self.key == "a" then
+                    self:down("battleArt")
                 elseif self.key == "i" then
                     self:down("battleItem")
                 end
@@ -610,10 +652,14 @@ screen = {
                 
                 if targetChosen then
                     if self:get("itemChosen") then
-                        appendTable(self:get("text"), self:get("item"):use(player, self:get("target")))
+                        for k, v in ipairs(self:get("item"):get("effect")) do
+                            appendTable(self:get("text"), v:use(self:get("item"), player, self:get("target")))
+                        end
                         self:set("itemChosen", false)
                     elseif self:get("artChosen") then
-                        -- do stuff lmao
+                        for k, v in ipairs(self:get("art"):get("effect")) do
+                            appendTable(self:get("text"), v:use(self:get("art"), player, self:get("target")))
+                        end
                         self:set("artChosen", false)
                     else
                         appendTable(self:get("text"), player:attack(self:get("target")))
@@ -636,7 +682,19 @@ screen = {
     end,
     
     battleArt = function(self)
-    
+        draw:initScreen(38, "screen/arts")
+        
+        self:pages(
+            player:get("arts"),
+            function(art)
+                return art:display()
+            end,
+            function(art)
+                self:down("inspectArtBattle")
+                self:set("art", art, "inspectArtBattle")
+            end,
+            function() self:up() end
+        )
     end,
     
     battleItem = function(self)
@@ -664,6 +722,7 @@ screen = {
     end,
     
     victory = function(self)
+        print("here")
         draw:initScreen(38, "screen/victory")
         
         draw:top()
@@ -751,8 +810,11 @@ screen = {
                 player:equip(item)
                 self:set("stage", "equip")
             elseif self.key == "u" and item:get("consumable") then
-                self:set("text", item:get("effect"):use(player))
+                for k, v in ipairs(item:get("effect")) do
+                    self:set("text", v:use(item, player))
+                end
                 if not item:get("infinite") then player:removeItem(item) end
+                
                 self:set("stage", "use")
             elseif self.key == "d" then
                 if item:get("stackable") then
@@ -760,6 +822,7 @@ screen = {
                 else
                     player:removeItem(item)
                     self:set("quantity", 0)
+                    
                     self:set("stage", "discard output")
                 end
             elseif self.key == "escape" then self:up() end
@@ -933,6 +996,40 @@ screen = {
         end
 	end,
 	
+    inspectArt = function(self)
+        draw:initScreen(38, "screen/inspectArt")
+        local art = self:get("art")
+        draw:imageSide("art/"..art:get("name"), "art/default")
+        
+        draw:top()
+        draw:item(art)
+        
+        if self:get("stage") == "input" then
+            if self.key == "escape" then self:up() end
+        end
+    end,
+    
+    inspectArtBattle = function(self)
+        draw:initScreen(38, "screen/inspectArt")
+        local art = self:get("art")
+        draw:imageSide("art/"..art:get("name"), "art/default")
+        
+        draw:top()
+        draw:item(art)
+        
+        draw:newline()
+        draw:options({"Use"})
+        
+        if self.key == "u" then
+            self:set("artChosen", true, "battle")
+            self:set("art", art, "battle")
+            self:upPast("battleArt")
+        elseif self.key == "escape" then
+            self:set("artChosen", false, "battle")
+            self:up()
+        end
+    end,
+    
     crafting = function(self)
         draw:initScreen(38, "screen/craftItem")
         

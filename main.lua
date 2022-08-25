@@ -2,6 +2,7 @@ require "script/color"
 require "script/dev"
 require "script/draw"
 require "script/globals"
+require "script/node/art"
 require "script/node/entity"
 require "script/node/item"
 require "script/node/world"
@@ -16,22 +17,21 @@ require "library/Tserial"
  
  - MINIMUM VIABLE BUILD -
  
- * Arts and Items shouldn't have a use function. Effects should fill both categories.
+ * Passives and buffs
+ * Death state.
+ * Add submap teleportation and map entities.
  * Saving / Loading (Loading is basically in place).
+ * Give dev toggles and add more dev commands for easier playtesting.
+ * Crafting of specific types in blacksmith etc.
  * Clear up inconsistent input hints.
  * Add headers or some sort of description for every page.
  * Add art for every page.
- * Add submap teleportation and map entities.
- * Give dev toggles and add more dev commands for easier playtesting.
  * Continue moving screen code blocks into functions.
  * Clean up draw.lua.
- * Crafting of specific types in blacksmith etc.
- * Death state.
  * Curing and blessing from the church.
  * Quests.
  * Generic end boss for the demo.
  * Add documentation and comments to the code.
- * Passives and buffs
  
  - EXTRA -
  
@@ -85,6 +85,9 @@ function love.load()
     love.graphics.setFont(font)
     love.graphics.setBackgroundColor(color.gray18)
     math.randomseed(os.time())
+    
+    devCommand("give Health Potion")
+    table.insert(player:get("arts"), newArt("Double Strike"))
 end
 
 function love.keyreleased(key)

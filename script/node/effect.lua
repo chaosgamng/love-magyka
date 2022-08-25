@@ -1,4 +1,5 @@
 require "script/node/node"
+require "script/tools"
 
 Effect = Node{
     classType = "art",
@@ -10,23 +11,28 @@ Effect = Node{
     crit = nil,
     critBonus = 0,
     amount = 1,
+    target = "entity",
     targetSelf = true,
     targetOther = true,
     verb = "casts",
     preposition = "on",
     
-    use = function(self, source, target)
+    use = function(self, parent, source, target)
         target = target or source
         local text = {}
-        local line = "%s %s" % {source:get("name"), self:get("verb")}
+        local line = "%s %s %s" % {source:get("name"), self:get("verb"), parent:display()}
         
         if source ~= target then line = "%s %s" % {line, self:get("preposition")} end
         
         if self:get("target") == "entity" then
-            if source ~= target then line = "%s %s," % {line, target:get("name")} end
+            if source ~= target then line = "%s %s, " % {line, target:get("name")}
+            else line = line..", " end
+            
+            if hpCost and parent.hp then parent:add("hp", -hpCost) end
+            if mpCost and parent.mp then parent:add("mp", -mpCost) end
             
             for i = 1, self:get("amount") do
-                table.insert(text, target:defend(source, self:get("effect"), line))
+                appendTable(text, target:defend(source, {self}, line))
             end
         end
         

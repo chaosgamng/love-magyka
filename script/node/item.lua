@@ -26,6 +26,10 @@ Item = Node{
         
         return "{%s}%s{white}%s" % {self.rarity, self.name, quantity}
     end,
+    
+    update = function(self)
+    
+    end,
 }
 
 function newItem(arg)
@@ -47,6 +51,7 @@ function newItem(arg)
             if item.effect[1] == nil then item.effect = {item.effect} end
             
             for k, v in ipairs(item.effect) do
+                if v.verb == nil then v.verb = "uses" end
                 item.effect[k] = newEffect(v)
             end
         end

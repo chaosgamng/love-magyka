@@ -32,9 +32,13 @@ Entity = Node{
     
     levelUp = function(self)
         self:add("level", 1)
-        self:multiply("max_hp", 1.1, "ceil")
-        self:multiply("max_mp", 1.1, "ceil")
-        self:multiply("max_xp", 1.1, "ceil")
+        self:get("stats").maxHp = math.ceil(self:get("stats").maxHp * 1.1)
+        self:get("stats").maxMp = math.ceil(self:get("stats").maxMp * 1.1)
+        self:get("maxXp") = math.ceil(self:get("maxXp") * 1.1)
+    end,
+    
+    display = function(self)
+        return self:get("name")
     end,
     
     
@@ -202,8 +206,13 @@ Entity = Node{
         local weapon = self.equipment["weapon"]
         local text = {}
         
-        if self:isEquipped("weapon") then effect = self:get("equipment").weapon:get("effect")
-        else effect = {newEffect(self:get("attackEffect"))} end
+        if self:isEquipped("weapon") then
+            effect = self:get("equipment").weapon:get("effect")
+        else
+            effect = newEffect(self:get("attackEffect"))
+            effect:set("verb", self:get("attackText"))
+            effect = {effect}
+        end
         
         for k, e in ipairs(effect) do
             if e.hp then
@@ -213,7 +222,7 @@ Entity = Node{
             
             if e.crit == nil then e.crit = e.critBonus + self:get("stats").crit end
             
-            table.insert(text, e:use(self, target))
+            appendTable(text, e:use(self, target))
         end
         
         return text

@@ -162,12 +162,24 @@ draw = {
             end
         end
         
-        self:newline()
-        self:text("<gp> %d" % {item:get("value")})
+        if item:get("value") then
+            self:newline()
+            self:text("<gp> %d" % {item:get("value")})
+        end
     end,
     
     effect = function(self, effect)
         local text = ""
+        
+        local hpCost = effect:get("hpCost")
+        local mpCost = effect:get("mpCost")
+        
+        if hpCost or mpCost then self:newline() end
+        
+        if hpCost and mpCost then self:text("Costs <hp>{hp} %s{white} and <mp>{mp} %s" % {hpCost, mpCost})
+        elseif hpCost then self:text("Costs <hp>{hp} %s" % hpCost)
+        elseif mpCost then self:text("Costs <mp>{mp} %s" % mpCost) end
+        
         local hp = effect:get("hp")
         local mp = effect:get("mp")
         
@@ -221,7 +233,7 @@ draw = {
     
     mainStats = function(self, entity, w)
         local x = 4
-        local w = w or 4
+        local w = w or 40
         
         self:hpmp(entity, w)
         self:icon("icon/xp", x, self.row)
