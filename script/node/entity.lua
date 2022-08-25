@@ -26,9 +26,11 @@ Entity = Node{
     equipment = {},
     inventory = {},
     
+    recipes = {},
+    
     arts = {},
     
-    recipes = {},
+    passives = {},
     
     levelUp = function(self)
         self:add("level", 1)
@@ -200,6 +202,23 @@ Entity = Node{
         
         if self:get("hp") > self:get("stats").maxHp then self:set("hp", self:get("stats").maxHp) end
         if self:get("mp") > self:get("stats").maxMp then self:set("mp", self:get("stats").maxMp) end
+    end,
+    
+    updatePassives = function(self)
+        self:update()
+        local text = {}
+        
+        for i = #self:get("passives"), 1, -1 do
+            local passive = self:get("passives")[i]
+            appendTable(text, passive:use(passive, passive, self))
+            
+            passive:add("turns", -1)
+            if passive:get("turns") <= 0 then
+                table.remove(self:get("passives"), i)
+            end
+        end
+        
+        return text
     end,
     
     attack = function(self, target)

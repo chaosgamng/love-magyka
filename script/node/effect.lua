@@ -2,8 +2,8 @@ require "script/node/node"
 require "script/tools"
 
 Effect = Node{
-    classType = "art",
-    name = "art",
+    classType = "effect",
+    name = "effect",
     hp = nil,
     mp = nil,
     hpCost = nil,
@@ -14,8 +14,16 @@ Effect = Node{
     target = "entity",
     targetSelf = true,
     targetOther = true,
+    color = "white",
     verb = "casts",
     preposition = "on",
+    
+    -- Passives
+    
+    turns = 1,
+    stats = nil,
+    buff = true,
+    passiveType = "",
     
     use = function(self, parent, source, target)
         target = target or source

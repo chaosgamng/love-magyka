@@ -17,7 +17,8 @@ require "library/Tserial"
  
  - MINIMUM VIABLE BUILD -
  
- * Passives and buffs
+ * Passives
+ * Arts can be "Player slashes Enemy, etc. instead of Player uses Double Slash on Enemy, etc."
  * Death state.
  * Add submap teleportation and map entities.
  * Saving / Loading (Loading is basically in place).
