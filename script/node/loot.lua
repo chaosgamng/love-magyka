@@ -23,16 +23,3 @@ Loot = Node{
         return items
     end,
 }
-
-function newLoot(arg)
-    if type(arg) == "string" then
-        local loot = require("data/loot")[arg]
-        loot.name = arg
-        return newLoot(loot)
-    elseif type(arg) == "table" then
-        local loot = deepcopy(arg)
-        
-        loot = Loot(loot)
-        return loot
-    end
-end

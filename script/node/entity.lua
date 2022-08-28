@@ -1,13 +1,10 @@
 require "script/globals"
 require "script/node/effect"
-require "script/node/item"
-require "script/node/loot"
 require "script/node/node"
 require "script/node/recipe"
 require "script/tools"
 
 Entity = Node{
-    classType = "entity",
     hp = 0,
     mp = 0,
     xp = 0,
@@ -25,18 +22,15 @@ Entity = Node{
     
     equipment = {},
     inventory = {},
-    
     recipes = {},
-    
     arts = {},
-    
     passives = {},
     
     levelUp = function(self)
         self:add("level", 1)
         self:get("stats").maxHp = math.ceil(self:get("stats").maxHp * 1.1)
         self:get("stats").maxMp = math.ceil(self:get("stats").maxMp * 1.1)
-        self:get("maxXp") = math.ceil(self:get("maxXp") * 1.1)
+        self:set("maxXp", math.ceil(self:get("maxXp") * 1.1))
     end,
     
     display = function(self)
@@ -179,6 +173,12 @@ Entity = Node{
             end
         end
         
+        for k, v in pairs(self:get("passives")) do
+            if v:get("stats") then
+                for _, stat in pairs(v:get("stats")) do table.insert(stats, stat) end
+            end
+        end
+        
         for k, v in pairs(stats) do
             if v.opp == "=" then
                 if statChanges[v.stat]["="] and v.value < statChanges[v.stat]["="] then
@@ -208,26 +208,48 @@ Entity = Node{
         self:update()
         local text = {}
         
-        for i = #self:get("passives"), 1, -1 do
-            local passive = self:get("passives")[i]
-            appendTable(text, passive:use(passive, passive, self))
-            
-            passive:add("turns", -1)
-            if passive:get("turns") <= 0 then
-                table.remove(self:get("passives"), i)
+        if #self:get("passives") > 0 then
+            for i = #self:get("passives"), 1, -1 do
+                local passive = self:get("passives")[i]
+                appendTable(text, passive:use(passive, self, self))
+                
+                passive:add("turns", -1)
+                if passive:get("turns") <= 0 then
+                    table.remove(self:get("passives"), i)
+                end
             end
         end
         
         return text
     end,
     
+    applyPassive = function(self, passive)
+        local turns = passive:get("turns")
+        if type(turns) == "table" then turns = rand(turns) end
+        
+        local passiveFound = false
+        for k, v in ipairs(self:get("passives")) do
+            if v:get("name") == passive:get("name") then
+                passiveFound = true
+                v:set("turns", math.max(v:get("turns"), passive:get("turns")))
+                break
+            end
+        end
+        
+        if not passiveFound then table.insert(self:get("passives"), passive) end
+        self:update()
+    end,
+    
     attack = function(self, target)
         local weapon = self.equipment["weapon"]
         local text = {}
+        local parent = self
         
         if self:isEquipped("weapon") then
+            parent = weapon
             effect = self:get("equipment").weapon:get("effect")
         else
+            parent = nil
             effect = newEffect(self:get("attackEffect"))
             effect:set("verb", self:get("attackText"))
             effect = {effect}
@@ -241,89 +263,7 @@ Entity = Node{
             
             if e.crit == nil then e.crit = e.critBonus + self:get("stats").crit end
             
-            appendTable(text, e:use(self, target))
-        end
-        
-        return text
-    end,
-    
-    defend = function(self, source, effect, text)
-        local prefix = text
-        local text = {}
-        
-        for k, e in ipairs(effect) do
-            local line = prefix
-            local hp = 0
-            local mp = 0
-            local passive = false
-            
-            if e:get("hp") then hp = rand(e:get("hp")) end
-            if e:get("mp") then mp = rand(e:get("mp")) end
-            
-            local miss = false
-            local dodge = false
-            
-            if source ~= self or (source == self and (hp < 0 or mp < 0)) then
-                if rand(1, 100) < 100 - source:get("stats").hit then
-                    miss = true
-                    line = line.."but %s dodges." % {self:get("name")}
-                elseif rand(1, 100) < self:get("stats").dodge then
-                    dodge = true
-                    line = line.."but misses."
-                end
-            end
-            
-            local crit = 1
-            if hp < 0 or mp < 0 then
-                local variance = rand(80, 120) / 100
-                
-                if rand(1, 100) < source:get("stats").crit - self:get("stats").resistance then
-                    crit = crit + (source:get("stats").critDamage / 100)
-                end
-                
-                if hp < 0 then
-                    hp = math.floor((hp + (self:get("stats").armor / 2) + self:get("stats").vitality) * crit * variance)
-                    if hp > -1 then hp = -1 end
-                end
-                
-                if mp < 0 then
-                    mp = math.floor((mp + self:get("stats").vitality) * crit * variance)
-                    if mp > -1 then mp = -1 end
-                end
-            end
-            
-            if not dodge and not miss then
-                if crit > 1 then crit = " critical "
-                else crit = "" end
-                
-                if hp < 0 and mp < 0 then line = line.."dealing <hp>{hp} %d {white}and <mp>{mp} %d {white}%sdamage." % {math.abs(hp), crit, math.abs(mp)}
-                elseif hp < 0 then line = line.."dealing <hp>{hp} %d {white}%sdamage." % {math.abs(hp), crit}
-                elseif mp < 0 then line = line.."dealing <mp>{mp} %d {white}%sdamage." % {math.abs(mp), crit} end
-                
-                if hp > 0 and mp > 0 and self:get("hp") == self:get("stats").maxHp and self:get("mp") == self:get("stats").maxMp then
-                    hp = 0
-                    mp = 0
-                    line = line.."doing nothing."
-                elseif hp > 0 and mp == 0 and self:get("hp") == self:get("stats").maxHp then
-                    hp = 0
-                    line = line.."doing nothing."
-                elseif mp > 0 and hp == 0 and self:get("mp") == self:get("stats").maxMp then
-                    mp = 0
-                    line = line.."doing nothing."
-                else
-                    if hp > 0 then hp = self:get("stats").maxHp - self:get("hp") end
-                    if mp > 0 then mp = self:get("stats").maxMp - self:get("mp") end
-                    
-                    if hp > 0 and mp > 0 then line = line.."healing <hp>{hp} %d {white}and <mp>{mp} %d{white}." % {math.abs(hp), math.abs(mp)}
-                    elseif hp > 0 then line = line.."healing <hp>{hp} %d{white}." % {math.abs(hp)}
-                    elseif mp > 0 then line = line.."healing <mp>{mp} %d{white}." % {math.abs(mp)} end
-                end
-                
-                self:add("hp", hp)
-                self:add("mp", mp)
-            end
-            
-            table.insert(text, line)
+            appendTable(text, e:use(parent, self, target))
         end
         
         return text
@@ -366,103 +306,3 @@ Entity = Node{
         end 
     end,
 }
-
-function newEntity(arg)
-    if type(arg) == "string" then
-        local entity = newEntity(require("data/entity")[arg])
-        
-        if entity then
-            entity.name = arg
-            return entity
-        else
-            return Entity{name=arg}
-        end
-    elseif type(arg) == "table" then
-        local entity = deepcopy(arg)
-        
-        if entity.inventory then
-            for k, v in ipairs(entity.inventory) do
-                v[1] = newItem(v[1])
-            end
-        else
-            entity.inventory = {}
-        end
-                
-        if entity.drops then
-            if entity.drops.drops ~= nil then entity.drops = {entity.drops} end
-            
-            for k, v in pairs(entity.drops) do
-                table.insert(entity.inventory, newLoot(v))
-            end
-        end
-        
-        if entity.equipment then
-            for k, v in pairs(entity.equipment) do
-                if v ~= "" then entity.equipment[k] = newItem(entity.equipment[k]) end
-            end
-        else
-            entity.equipment = {}
-            for k, v in ipairs(equipment) do entity.equipment[v] = "" end
-        end
-        
-        if entity.recipes then
-            for k, v in ipairs(entity.recipe) do
-                entity.recipe[k] = newRecipe(v)
-            end
-        end
-        
-        if entity.arts then
-            for k, v in ipairs(entity.arts) do
-                entity.art[k] = newEffect(v)
-            end
-        end
-        
-        if entity.attackEffect then entity.attackEffect = newEffect(entity.attackEffect)
-        else entity.attackEffect = newEffect({hp={-1, -1}}) end
-        
-        local defaultStats = {
-            maxHp = 7,
-            maxMp = 10,
-            hit = 95,
-            dodge = 4,
-            crit = 4,
-            critDamage = 100,
-        }
-        
-        if entity.baseStats then
-            for k, v in pairs(defaultStats) do
-                if not entity.baseStats[k] then entity.baseStats[k] = v end
-            end
-        else
-            entity.baseStats = defaultStats
-        end
-        
-        entity.stats = {}
-        
-        for k, v in ipairs(stats) do
-            if entity.baseStats[v] then
-                entity.stats[v] = entity.baseStats[v]
-            else
-                entity.stats[v] = 0
-                entity.baseStats[v] = 0
-            end
-        end
-        
-        for k, v in ipairs(extraStats) do
-            if entity.baseStats[v] then
-                entity.stats[v] = entity.baseStats[v]
-            else
-                entity.stats[v] = 0
-                entity.baseStats[v] = 0
-            end
-        end
-        
-        if not entity.hp then entity.hp = entity.baseStats.maxHp end
-        if not entity.mp then entity.mp = entity.baseStats.maxMp end
-        
-        entity = Entity(entity)
-        entity:update()
-        
-        return entity
-    end
-end

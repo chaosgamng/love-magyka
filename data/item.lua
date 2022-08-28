@@ -10,6 +10,16 @@ return {
         consumable = true,
         effect = {hp = {5, 9}},
         target = "entity",
+        targetOther = false,
+    },
+    ["Regeneration Potion"] = {
+        description = {"Crazy that the sussy pink liquid makes you healthier over time."},
+        rarity = "rare",
+        value = 24,
+        consumable = true,
+        effect = {passive="Lesser Regeneration"},
+        target = "entity",
+        targetOther = false,
     },
     ["Throwing Knife"] = {
         description = {"Don't cut yourself :)."},
@@ -17,6 +27,15 @@ return {
         consumable = true,
         effect = {hp = {-4,-5}},
         target = "entity",
+        targetSelf = false,
+    },
+    ["Burning Throwing Knife"] = {
+        description = {"Don't cut OR burn yourself :O.", "Line 2!?"},
+        rarity = "rare",
+        consumable = true,
+        effect = {hp = {-2, -3}, passive = "Burning"},
+        target = "entity",
+        targetSelf = false,
     },
     ["Sword"] = {
         description = {"Wow, it's a sword! I've never seen one of these before!"},

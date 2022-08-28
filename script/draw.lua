@@ -186,12 +186,12 @@ draw = {
         if hp or mp then self:newline() end
         
         if hp and hp[1] + hp[2] ~= 0 then
-            if hp[2] > 0 then text = "Restores" else text = "Damages" end
+            if hp[2] > 0 then text = "Heals" else text = "Damages" end
             self:text("%s <hp> {hp}%d - %d" % {text, math.abs(hp[1]), math.abs(hp[2])})
         end
         
         if mp and mp[1] + mp[2] ~= 0 then
-            if mp[2] > 0 then text = "Restores" else text = "Damages" end
+            if mp[2] > 0 then text = "Heals" else text = "Damages" end
             self:text("%s <mp> {mp}%d - %d" % {text, math.abs(mp[1]), math.abs(mp[2])})
         end
     end,

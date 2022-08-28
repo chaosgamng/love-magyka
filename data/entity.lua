@@ -24,7 +24,7 @@ return {
         baseStats = {
             maxHp = 6,
             maxMp = 2,
-            armor = 2,
+            armor = 1,
             hit = 85,
             dodge = 2,
             crit = 3,

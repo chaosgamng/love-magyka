@@ -1,7 +1,6 @@
 require "script/globals"
 require "script/tools"
-require "script/node/map"
-require "script/node/town"
+require "script/generator"
 
 screen = {
     width = math.floor(love.graphics.getWidth() / 10),
@@ -23,24 +22,10 @@ screen = {
             store = "",
             storeType = "",
         },
-        store = {
-            page = 1,
-        },
-        inventory = {
-            page = 1,
-        },
-        inventorySell = {
-            page = 1,
-        },
-        arts = {
-            page = 1,
-        },
 		battleItem = {
-			page = 1,
             item = nil,
 		},
         battleArt = {
-            page = 1,
             art = nil
         },
         battle = {
@@ -59,6 +44,9 @@ screen = {
         victory = {
             stage = "input",
             lootEntity = newEntity{},
+        },
+        defeat = {
+            stage = "curse",
         },
         inspectItem = {
             stage = "input",
@@ -93,7 +81,6 @@ screen = {
             art = nil,
         },
         crafting = {
-            page = 1,
             station = "none",
         },
         craftItem = {
@@ -128,6 +115,7 @@ screen = {
             table.remove(self.branch, i)
             if name == nextScreen then
                 nextScreen = self.branch[i - 1]
+                table.remove(self.branch, i - 1)
                 break
             end
         end
@@ -146,11 +134,13 @@ screen = {
     
     get = function(self, key, screen)
 		screen = screen or self.current
+        if self.branchData[screen] == nil then return nil end
         return self.branchData[screen][key]
     end,
     
     set = function(self, key, value, screen)
 		screen = screen or self.current
+        if self.branchData[screen] == nil then self.branchData[screen] = {} end
         self.branchData[screen][key] = value
     end,
     
@@ -159,6 +149,8 @@ screen = {
     end,
     
     pages = function(self, list, printFunction, confirmFunction, cancelFunction)
+        if self:get("page") == nil then self:set("page", 1) end
+        
 		local start = (self:get("page") - 1) * 10 + 1
 		local stop = self:get("page") * 10
 		if stop > #list then stop = #list end
@@ -210,6 +202,11 @@ screen = {
         elseif self.key == "down" and self:get("quantity") > 1 then self:add("quantity", -1)
         elseif self.key == "return" and maximum ~= 0 then confirmFunction()
         elseif self.key == "escape" then cancelFunction() end
+    end,
+    
+    cancel = function(self)
+        if self.key == "return"  or self.key == "escape" then return true end
+        return false
     end,
     
     
@@ -592,13 +589,6 @@ screen = {
             -- Choose action
             if self:get("stage") == "input" then
                 self:set("text", {})
-                if self:get("itemChosen") then
-                    self:set("targetType", "all")
-                    self:set("stage", "target")
-                elseif self:get("artChosen") then
-                    self:set("targetType", "all")
-                    self:set("stage", "target")
-                end
                 
                 draw:options({"Fight", "Art", "Guard", "Item", "Escape"})
                 
@@ -665,6 +655,7 @@ screen = {
                         appendTable(self:get("text"), player:attack(self:get("target")))
                     end
                     
+                    appendTable(self:get("text"), player:updatePassives())
                     self:set("stage", "output")
                 end
             end
@@ -676,6 +667,7 @@ screen = {
             if self:get("stage") == "input" then
                 self:set("text", {})
                 appendTable(self:get("text"), enemy:attack(player))
+                appendTable(self:get("text"), enemy:updatePassives())
                 self:set("stage", "output")
             end
         end
@@ -715,14 +707,13 @@ screen = {
             end,
             function(item)
                 self:down("inspectItemBattle")
-                self:set("item", item, "inspectItemBattle")
+                self:set("item", item[1], "inspectItemBattle")
             end,
             function() self:up() end
         )
     end,
     
     victory = function(self)
-        print("here")
         draw:initScreen(38, "screen/victory")
         
         draw:top()
@@ -782,9 +773,18 @@ screen = {
         draw:hpmp(player)
         
         draw:newline()
-        draw:text("You lost! Fuck you.")
+        draw:text("You lost!")
         
-        if self.key == "return" then self:upPast("battle") end
+        draw:newline()
+        draw:text("The sound of oars treading water draws near.")
+        
+        if self:get("stage") == "curse" then
+            player:set("hp", 1)
+            player:applyPassive(newEffect("Charon's Curse"))
+            self:set("stage", "input")
+        elseif self:get("stage") == "input" then
+            if self:cancel() then self:upPast("battle") end
+        end
     end,
     
     inspectItem = function(self)
@@ -793,6 +793,9 @@ screen = {
         draw:imageSide("item/"..item:get("name"), "item/default")
         
         draw:top()
+        draw:hpmp(player)
+        draw:newline()
+        draw:newline()
         local quantity = 0
         if item:get("stackable") then quantity = player:numOfItem(item) end
         draw:item(item, quantity)
@@ -811,7 +814,7 @@ screen = {
                 self:set("stage", "equip")
             elseif self.key == "u" and item:get("consumable") then
                 for k, v in ipairs(item:get("effect")) do
-                    self:set("text", v:use(item, player))
+                    appendTable(self:get("text"), v:use(item, player, player))
                 end
                 if not item:get("infinite") then player:removeItem(item) end
                 
@@ -834,7 +837,7 @@ screen = {
             draw:newline()
             draw:text("- Press [ENTER] to continue.")
             
-            if self.key == "escape" or self.key == "return" then self:up() end
+            if self:cancel() then self:up() end
         
         
         elseif self:get("stage") == "use" then
@@ -844,7 +847,7 @@ screen = {
             draw:newline()
             draw:text("- Press [ENTER] to continue.")
             
-            if self.key == "escape" or self.key == "return" then self:set("stage", "output") end
+            if self:cancel() then self:set("stage", "output") end
         
         
         elseif self:get("stage") == "discard" then
@@ -861,7 +864,7 @@ screen = {
             draw:newline()
             draw:text("- Press [ENTER] to continue.")
             
-            if self.key == "escape" or self.key == "return" then
+            if self:cancel() then
                 player:removeItem(item, self:get("quantity"))
                 self:set("stage", "output")
             end
@@ -869,7 +872,10 @@ screen = {
         
         elseif self:get("stage") == "output" then
             if player:numOfItem(item) == 0 or not item:get("stackable") then self:up()
-            else self:set("stage", "input") end
+            else
+                self:set("text", {})
+                self:set("stage", "input")
+            end
         end
     end,
     
@@ -917,7 +923,7 @@ screen = {
             draw:newline()
             draw:text("- Press [ENTER] to continue.")
             
-            if self.key == "escape" or self.key == "return" then
+            if self:cancel() then
                 player:removeItem(item, self:get("quantity"))
                 player:add("gp", sellValue)
                 
@@ -950,7 +956,7 @@ screen = {
             draw:newline()
             draw:text("- Press [ENTER] to continue.")
             
-            if self.key == "escape" or self.key == "return" then
+            if self:cancel() then
                 player:addItem(newItem(item), self:get("quantity"))
                 player:add("gp", -self:get("quantity") * item:get("value"))
                 self:up()
@@ -989,6 +995,8 @@ screen = {
         if self.key == "u" and item:get("consumable") then
             self:set("itemChosen", true, "battle")
             self:set("item", item, "battle")
+            self:set("targetType", "all", "battle")
+            self:set("stage", "target", "battle")
             self:upPast("battleItem")
         elseif self.key == "escape" then
             self:set("itemChosen", false, "battle")
@@ -1023,6 +1031,8 @@ screen = {
         if self.key == "u" then
             self:set("artChosen", true, "battle")
             self:set("art", art, "battle")
+            self:set("targetType", "all", "battle")
+            self:set("stage", "target", "battle")
             self:upPast("battleArt")
         elseif self.key == "escape" then
             self:set("artChosen", false, "battle")
@@ -1085,7 +1095,7 @@ screen = {
             draw:newline()
             draw:text("Crafted %s." % item:display())
             
-            if self.key == "escape" or self.key == "return" then
+            if self:cancel() then
                 for k, v in pairs(recipe:get("ingredients")) do
                     player:removeItem(k, v * self:get("quantity"))
                 end

@@ -115,6 +115,10 @@ function split(str, sep, num)
     return t
 end
 
+function repr(str)
+    return string.format("%q", str):gsub("\\\n", "\\n")
+end
+
 function deepcopy(orig)
     local orig_type = type(orig)
     local copy

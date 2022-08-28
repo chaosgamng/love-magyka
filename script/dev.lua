@@ -30,6 +30,10 @@ devCommand = function(command)
         player:set("mp", 999999999)
     
     
+    elseif word == "sget" then
+        print(dumpTable(screen[args[1]]))
+    
+    
     elseif word == "pget" then
         print(dumpTable(player:get(args[1])))
     
@@ -39,7 +43,7 @@ devCommand = function(command)
             local val = tonumber(args[2])
             if val == nil then val = args[2] end
             
-            player:set(args[1], args[2])
+            player:set(args[1], val)
         elseif #args == 3 then
             local val = tonumber(args[3])
             if val == nil then val = args[3] end
@@ -47,12 +51,5 @@ devCommand = function(command)
             local t = player:get(args[1])
             if t[args[2]] then t[args[2]] = val end
         end
-    
-    
-    elseif word == "editor" then
-        for k, v in pairs(require("script/editor")) do screen[k] = v end
-        screen.current = "editorMain"
-        screen.branch = {}
-        screen.bracnData = {}
     end
 end

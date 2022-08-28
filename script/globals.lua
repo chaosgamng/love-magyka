@@ -1,6 +1,5 @@
 equipment = {
     "weapon",
-    "shield",
     "helmet",
     "body",
     "hands",
@@ -46,4 +45,15 @@ extraStats = {
     "airResistance",
     "waterDamage",
     "waterResistance",
+}
+
+elements = {
+    "hp",
+    "mp",
+    "light",
+    "night",
+    "fire",
+    "earth",
+    "air",
+    "water",
 }

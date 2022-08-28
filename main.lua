@@ -1,15 +1,13 @@
+require "library/sqlite3"
+db = assert(sqlite3.open("data/data.db"))
+
 require "script/color"
 require "script/dev"
 require "script/draw"
+require "script/generator"
 require "script/globals"
-require "script/node/art"
-require "script/node/entity"
-require "script/node/item"
-require "script/node/world"
 require "script/screen"
 require "script/tools"
-
-require "library/Tserial"
 
 -- TODO
 
@@ -17,9 +15,6 @@ require "library/Tserial"
  
  - MINIMUM VIABLE BUILD -
  
- * Passives
- * Arts can be "Player slashes Enemy, etc. instead of Player uses Double Slash on Enemy, etc."
- * Death state.
  * Add submap teleportation and map entities.
  * Saving / Loading (Loading is basically in place).
  * Give dev toggles and add more dev commands for easier playtesting.
@@ -27,12 +22,9 @@ require "library/Tserial"
  * Clear up inconsistent input hints.
  * Add headers or some sort of description for every page.
  * Add art for every page.
- * Continue moving screen code blocks into functions.
- * Clean up draw.lua.
  * Curing and blessing from the church.
  * Quests.
  * Generic end boss for the demo.
- * Add documentation and comments to the code.
  
  - EXTRA -
  
@@ -58,11 +50,10 @@ require "library/Tserial"
 ]]--
 
 
-world = World{}
+world = newWorld()
 player = world:get("player")
 
 console = false
-local editor = false
 local command = ""
 
 keyLShift = false
@@ -75,6 +66,8 @@ input = {
     right = {"right", false},
 }
 
+backspace = false
+
 local keyTimer = 0
 local keyTimerDefault = 0.1
 
@@ -82,13 +75,12 @@ function love.load()
     font = love.graphics.newImageFont("image/imagefont.png",
         " abcdefghijklmnopqrstuvwxyz" ..
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ0" ..
-        "123456789.,!?-+/():;%&`'*#=[]\"|")
+        "123456789.,!?-+/():;%&`'*#=[]\"|_")
     love.graphics.setFont(font)
     love.graphics.setBackgroundColor(color.gray18)
     math.randomseed(os.time())
     
-    devCommand("give Health Potion")
-    table.insert(player:get("arts"), newArt("Double Strike"))
+    devCommand("give Sword")
 end
 
 function love.keyreleased(key)
@@ -97,9 +89,13 @@ function love.keyreleased(key)
 end
 
 function love.keypressed(key)
-    if key == "`" then console = not console end
+    if key == "`" then
+        console = not console
+        love.keyboard.setKeyRepeat(console)
+    end
     if key == "lshift" then keyLShift = true end
     if key == "rshift" then keyRShift = true end
+    
     if not console then screen.key = key end
     
     if console then
@@ -110,6 +106,9 @@ function love.keypressed(key)
         elseif key == "backspace" then 
             if #command > 1 then command = command:sub(1, #command - 1)
             elseif #command == 1 then command = "" end
+        elseif key == "escape" then
+            command = ""
+            console = false
         elseif key == "return" then
             devCommand(command)
             command = ""
@@ -139,6 +138,7 @@ function love.draw()
         draw:rect("gray18", 1, 1, screen.width, 20)
         draw:rect("gray48", 1, 21, screen.width, 1)
         draw:text(command, 2, 21)
+        draw:text("_", 2 + #command, 21)
     end
     
     love.timer.sleep(1/30)
