@@ -9,6 +9,7 @@ require "script/globals"
 require "script/screen"
 require "script/tools"
 
+
 -- TODO
 
 --[[
@@ -50,11 +51,10 @@ require "script/tools"
 ]]--
 
 
+-- Global Variables
+
 world = newWorld()
 player = world:get("player")
-
-console = false
-local command = ""
 
 keyLShift = false
 keyRShift = false
@@ -68,10 +68,22 @@ input = {
 
 backspace = false
 
+
+-- Local Variables
+
+local console = false
+local command = ""
+
 local keyTimer = 0
 local keyTimerDefault = 0.1
 
+
+-- Initialization
+
 function love.load()
+    
+    -- Setup
+    
     font = love.graphics.newImageFont("image/imagefont.png",
         " abcdefghijklmnopqrstuvwxyz" ..
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ0" ..
@@ -80,8 +92,12 @@ function love.load()
     love.graphics.setBackgroundColor(color.gray18)
     math.randomseed(os.time())
     
-    devCommand("give Sword")
+    
+    -- Extra
 end
+
+
+-- Input Functions
 
 function love.keyreleased(key)
     if key == "lshift" then keyLShift = false end
@@ -89,6 +105,9 @@ function love.keyreleased(key)
 end
 
 function love.keypressed(key)
+    
+    -- Global Keys
+    
     if key == "`" then
         console = not console
         love.keyboard.setKeyRepeat(console)
@@ -96,19 +115,34 @@ function love.keypressed(key)
     if key == "lshift" then keyLShift = true end
     if key == "rshift" then keyRShift = true end
     
+    
+    -- Send key to game loop
+    
     if not console then screen.key = key end
+    
+    
+    -- Console Input
     
     if console then
         if ("abcdefghijklmnopqrstuvwxyz1234567890,"):find(key) then
             if keyShift then command = command..key:upper()
             else command = command..key end
-        elseif key == "space" then command = command.." "
+        
+        
+        elseif key == "space" then
+            command = command.." "
+        
+        
         elseif key == "backspace" then 
             if #command > 1 then command = command:sub(1, #command - 1)
             elseif #command == 1 then command = "" end
+        
+        
         elseif key == "escape" then
             command = ""
             console = false
+        
+        
         elseif key == "return" then
             devCommand(command)
             command = ""
@@ -117,7 +151,13 @@ function love.keypressed(key)
     end
 end
 
+
+-- Update
+
 function love.update(dt)
+    
+    -- Input Key Repetition
+    
     keyTimer = keyTimer + dt
     if keyTimer >= keyTimerDefault then
         keyTimer = keyTimer - keyTimerDefault
@@ -127,12 +167,22 @@ function love.update(dt)
         end
     end
     
+    
+    -- Shift
+    
     keyShift = keyLShift or keyRShift
 end
 
+
+-- Draw and Game Loop
+
 function love.draw()
-    collectgarbage("collect")
+    -- Game Loop
+    
     screen:update(0)
+    
+    
+    -- Console Drawing
     
     if console then
         draw:rect("gray18", 1, 1, screen.width, 20)
@@ -141,5 +191,9 @@ function love.draw()
         draw:text("_", 2 + #command, 21)
     end
     
+    
+    -- Performance Enhancement
+    
+    collectgarbage("collect")
     love.timer.sleep(1/30)
 end

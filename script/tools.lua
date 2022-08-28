@@ -1,10 +1,10 @@
-getmetatable("").__mod = function(a, b)
+getmetatable("").__mod = function(a, b) -- Adds "%" string format operator to strings
     if not b then return a
     elseif type(b) == "table" then return string.format(a, unpack(b))
     else return string.format(a, b) end
 end
 
-function export(class)
+function export(class) -- Exports table and metatable data to a table
     local t = {}
     local mt = getmetatable(class).__index
     updateTable(mt, class)
@@ -23,7 +23,7 @@ function export(class)
     return t
 end
 
-function dumpTable(o)
+function dumpTable(o) -- Dumps a table to a string
    if type(o) == 'table' then
       local s = '{ '
       for k, v in pairs(o) do
@@ -36,15 +36,15 @@ function dumpTable(o)
    end
 end
 
-function updateTable(t1, t2)
+function updateTable(t1, t2) -- Updates t1 with t2's values
     for k, v in pairs(t2) do t1[k] = v end
 end
 
-function appendTable(t1, t2)
+function appendTable(t1, t2) -- Appends t2 to t1
     for k, v in pairs(t2) do table.insert(t1, v) end
 end
 
-function sliceTable(t, first, last, step)
+function sliceTable(t, first, last, step) -- Slices a table with integer indices
     local first = first or 1
     local last = last or #t
     local step = step or 1
@@ -58,7 +58,7 @@ function sliceTable(t, first, last, step)
     return sliced
 end 
 
-function rand(...)
+function rand(...) -- Picks a random number between low and high
     local arg = {...}
     local a = 0
     local b = 1
@@ -80,16 +80,16 @@ function rand(...)
     return math.random(a, b)
 end
 
-function isInRange(str, low, high)
+function isInRange(str, low, high) -- Determines if a string is between a number range
     num = tonumber(str)
     if str:match("^%-?%d+$") and num >= low and num <= high then return true else return false end
 end
 
-function count(str, subString)
+function count(str, subString) -- Counts occurences of a string in a string
     return select(2, str:gsub(subString, ""))
 end
 
-function split(str, sep, num)
+function split(str, sep, num) -- Splits a string by a string and returns a table
     local sep = sep or " "
     local num = num or false
     local start = 1
@@ -115,11 +115,11 @@ function split(str, sep, num)
     return t
 end
 
-function repr(str)
+function repr(str) -- Returns a string with escape codes backslashed
     return string.format("%q", str):gsub("\\\n", "\\n")
 end
 
-function deepcopy(orig)
+function deepcopy(orig) -- Recursively copies a table
     local orig_type = type(orig)
     local copy
     if orig_type == 'table' then

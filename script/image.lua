@@ -1,3 +1,6 @@
+
+-- Autoloads all images to memory
+
 image = {}
 
 love.graphics.setDefaultFilter("nearest", "nearest")

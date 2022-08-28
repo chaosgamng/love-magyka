@@ -12,8 +12,7 @@ draw = {
     
     -- Base
     
-    
-    text = function(self, text, ...)
+    text = function(self, text, ...) -- Draw cell-snapped text
         local arg = {...}
         local x = 4
         local c = "white"
@@ -90,7 +89,7 @@ draw = {
         self.row = self.row + 1
     end,
     
-    icon = function(self, i, ...)
+    icon = function(self, i, ...) -- Draw a cell-sized icon
         local arg = {...}
         local x = 4
         local c = color.white
@@ -122,7 +121,7 @@ draw = {
         love.graphics.draw(i, (x - 1)*self.width, (self.row - 1)*self.height, 0, s)
     end,
     
-    rect = function(self, c, x, y, w, h)
+    rect = function(self, c, x, y, w, h) -- Draw a cell-sized rectangle
         if type(c) == "string" then c = color[c] end
         
         local w = w or 1
@@ -132,25 +131,24 @@ draw = {
         love.graphics.rectangle("fill", (x-1)*self.width, (y-1)*self.height, w*self.width, h*self.height)
     end,
     
-    image = function(self, i, x, y)
+    image = function(self, i, x, y) -- Draw a cell-snapped image
         local i = i or "screen/default"
         if not image[i] then i = "screen/default" end
         self:icon(i, x, y, 8)
     end,
     
-    newline = function(self)
+    newline = function(self) -- Go to next row
         self.row = self.row + 1
     end,
     
-    top = function(self)
+    top = function(self) -- Reset rows
         self.row = 3
     end,
     
     
     -- Compound
     
-    
-    item = function(self, item, quantity)
+    item = function(self, item, quantity) -- Draw stats for an item
         self:text(item:display(quantity))
         self:newline()
         for k, v in ipairs(item:get("description")) do self:text(v) end
@@ -168,7 +166,7 @@ draw = {
         end
     end,
     
-    effect = function(self, effect)
+    effect = function(self, effect) -- Draw stats for an effect
         local text = ""
         
         local hpCost = effect:get("hpCost")
@@ -196,7 +194,7 @@ draw = {
         end
     end,
     
-    imageSide = function(self, i, default, c)
+    imageSide = function(self, i, default, c) -- Draw an image on the side of the screen
         c = c or color.white
         if not image[i] then i = default end
         
@@ -204,14 +202,14 @@ draw = {
         self:image(i, self.subLeft, 2, color.white)
     end,
     
-    initScreen = function(self, subWidth, i)
+    initScreen = function(self, subWidth, i) -- Draw a border and image
         self:top()
         self:border(subWidth)
         self:image(i, self.subLeft, 2)
         self:top()
     end,
     
-    hpmp = function(self, entity, w)
+    hpmp = function(self, entity, w) -- Draw name and hp and mp bars
         local x = 4
         local y = self.row
         w = w or 40
@@ -223,7 +221,7 @@ draw = {
         self:bar(entity:get("mp"), entity:get("stats").maxMp, color.mp, color.gray48, w, "MP: ", "#", x + 2)
     end,
     
-    hpmpAlt = function(self, entity, x, y)
+    hpmpAlt = function(self, entity, x, y) -- Draw name and hp and mp bars at a location
         self:text(entity:get("name"), x, y)
         self:icon("icon/hp", x, self.row)
         self:bar(entity:get("hp"), entity:get("stats").maxHp, color.hp, color.gray48, 20, "HP: ", "%", x + 2)
@@ -231,7 +229,7 @@ draw = {
         self:bar(entity:get("mp"), entity:get("stats").maxMp, color.mp, color.gray48, 20, "MP: ", "%", x + 2)
     end,
     
-    mainStats = function(self, entity, w)
+    mainStats = function(self, entity, w) -- Draw name and hp, mp, xp, and gp stats
         local x = 4
         local w = w or 40
         
@@ -242,7 +240,7 @@ draw = {
         self:text("Gold: %d" % {entity:get("gp")}, x + 2)
     end,
     
-    options = function(self, options, x, y)
+    options = function(self, options, x, y) -- Draw options with the first letter in square brackets
         local x = x or 5
         if y then self.row = y end
         
@@ -255,7 +253,7 @@ draw = {
         end
     end,
     
-    optionsNumbered = function(self, options, x, y)
+    optionsNumbered = function(self, options, x, y) -- Draw options by number in parentheses
         local x = x or 5
         if y then self.row = y end
         
@@ -268,7 +266,7 @@ draw = {
         end
     end,
     
-    bar = function(self, current, maximum, fillColor, emptyColor, width, label, form, x, y)
+    bar = function(self, current, maximum, fillColor, emptyColor, width, label, form, x, y) -- Draw a bar
         local x = x or 4
         if y then self.row = y end
         local label = label or ""
@@ -302,7 +300,7 @@ draw = {
         self:text(labelText, x + width + 1)
     end,
     
-    border = function(self, subWidth)
+    border = function(self, subWidth) -- Draw a border around the screen
         local subWidth = subWidth or 1
         local c = color.gray28
         
@@ -313,5 +311,9 @@ draw = {
         
         self:rect(c, screen.width - subWidth - 1, 1, 2, screen.height)
         self.subLeft = screen.width - subWidth + 1
+    end,
+    
+    header = function(self, str) -- Draw a header (QoL)
+        self:text(" -= %s {white}=-" % str)
     end,
 }

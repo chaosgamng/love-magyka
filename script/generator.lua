@@ -12,14 +12,17 @@ require "script/tools"
 
 json = require("library/json")
 
-function setupString(arg, t)
+
+-- Misc Functions
+
+function setupString(arg, t) -- Loads an item from a table from the database
     local obj = nil
     local query = db:prepare("select * from %s where name=\"%s\"" % {t, arg})
     for row in query:nrows() do obj = row end
     return obj
 end
 
-function setupTable(arg)
+function setupTable(arg) -- Automatically formats as much of the table from the database as possible
     for k, v in pairs(arg) do
         if v == "true" then arg[k] = true end
         if v == "false" then arg[k] = false end
@@ -28,7 +31,10 @@ function setupTable(arg)
     return deepcopy(arg)
 end
 
-function newArt(arg)
+
+-- Object Generators
+
+function newArt(arg) -- Unedited
     if type(arg) == "string" then
         local art = newArt(require("data/art")[arg])
         
@@ -62,8 +68,14 @@ function newEffect(arg)
     elseif type(arg) == "table" then
         local effect = setupTable(arg)
         
+        
+        -- Parse hp and mp effects
+        
         if effect.hp and type(effect.hp) == "string" then effect.hp = json.decode(effect.hp) end
         if effect.mp and type(effect.mp) == "string" then effect.mp = json.decode(effect.mp) end
+        
+        
+        -- Parse stat effects and autoformat
         
         if effect.stats then
             effect.stats = json.decode(effect.stats)
@@ -72,6 +84,9 @@ function newEffect(arg)
                 if type(v) ~= "table" then effect.stats[k] = {stat = k, value = v, opp = "+"} end
             end
         end
+        
+        
+        -- Parase passive effects and autoformat
         
         if effect.passive then
             if effect.passive == true then
@@ -134,11 +149,16 @@ function newEntity(arg)
         end]]--
         
         
+        -- Parse attack effect
+        
         if entity.attackEffect then
             entity.attackEffect = newEffect(json.decode(entity.attackEffect))
         else
             entity.attackEffect = newEffect({hp={-1, -1}})
         end
+        
+        
+        -- Parse entity stats and autofill from defaults
         
         local defaultStats = {
             maxHp = 7,
@@ -149,7 +169,7 @@ function newEntity(arg)
             critDamage = 100,
         }
         
-        if entity.stats then
+        if entity.stats then -- Load stats for entities that are enemies
             entity.stats = json.decode(entity.stats)
             entity.baseStats = entity.stats
         end
@@ -165,6 +185,9 @@ function newEntity(arg)
         end
         
         entity.stats = {}
+        
+        
+        -- Autofill missing stats
         
         for k, v in ipairs(stats) do
             if entity.baseStats[v] then
@@ -184,8 +207,14 @@ function newEntity(arg)
             end
         end
         
+        
+        -- Set entity hp and mp to max if not specified
+        
         if not entity.hp then entity.hp = entity.baseStats.maxHp end
         if not entity.mp then entity.mp = entity.baseStats.maxMp end
+        
+        
+        -- Parse drops for enemies
         
         if entity.drops then
             entity.drops = json.decode(entity.drops)
@@ -211,9 +240,18 @@ function newItem(arg)
     elseif type(arg) == "table" then
         local item = deepcopy(arg)
         
+        
+        -- Parse description into table by splitting by newlines
+        
         if item.description then item.description = split(item.description, "\13\n") end
         
+        
+        -- Autoformat stackable bool
+        
         if item.equipment then item.stackable = false end
+        
+        
+        -- Parse stats and autofill
         
         if item.stats then
             item.stats = json.decode(item.stats)
@@ -222,6 +260,9 @@ function newItem(arg)
                 if type(v) ~= "table" then item.stats[k] = {stat = k, value = v, opp = "+"} end
             end
         end
+        
+        
+        -- Parse effects and autoformat verbs if nil
         
         if item.effect then
             item.effect = json.decode(item.effect)
@@ -242,7 +283,7 @@ function newItem(arg)
     end
 end
 
-function newLoot(arg)
+function newLoot(arg) -- Unedited
     if type(arg) == "string" then
         local loot = require("data/loot")[arg]
         loot.name = arg
@@ -255,7 +296,7 @@ function newLoot(arg)
     end
 end
 
-function newMap(arg)
+function newMap(arg) -- Unedited
     if type(arg) == "string" then
         local map = Map{}
         
@@ -302,7 +343,7 @@ function newMap(arg)
     end
 end
 
-function newRecipe(arg)
+function newRecipe(arg) -- Unedited
     if type(arg) == "string" then
         local recipe = require("data/recipe")[arg]
         recipe.name = arg
@@ -317,7 +358,7 @@ function newRecipe(arg)
     end
 end
 
-function newStore(arg, town)
+function newStore(arg, town) -- Unedited
     if type(arg) == "string" then
         local store = newStore(require("data/town")[town]["stores"][arg])
         
@@ -337,7 +378,7 @@ function newStore(arg, town)
     end
 end
 
-function newTown(arg)
+function newTown(arg) -- Unedited
     if type(arg) == "string" then
         local town = newTown(require("data/town")[arg])
         

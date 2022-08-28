@@ -1,3 +1,6 @@
+
+-- Equipment Slots
+
 equipment = {
     "weapon",
     "helmet",
@@ -8,6 +11,9 @@ equipment = {
     "ring",
     "acc",
 }
+
+
+-- Displayed Stats
 
 stats = {
     "maxHp",
@@ -24,6 +30,9 @@ stats = {
     "luck",
 }
 
+
+-- Hidden Stats
+
 extraStats = {
     "hpRegen",
     "mpRegen",
@@ -33,23 +42,12 @@ extraStats = {
     "block",
     "parry",
     "deflect",
-    "lightDamage",
-    "lightResistance",
-    "darkDamage",
-    "darkResistance",
-    "fireDamage",
-    "fireResistance",
-    "earthDamage",
-    "earthResistance",
-    "airDamage",
-    "airResistance",
-    "waterDamage",
-    "waterResistance",
 }
 
+
+-- Elements
+
 elements = {
-    "hp",
-    "mp",
     "light",
     "night",
     "fire",
@@ -57,3 +55,11 @@ elements = {
     "air",
     "water",
 }
+
+
+-- Add elemental resistance and damage to extraStats
+
+for k, v in ipairs(elements) do
+    table.insert(extraStats, k.."Damage")
+    table.insert(extraStats, k.."Resistance")
+end
